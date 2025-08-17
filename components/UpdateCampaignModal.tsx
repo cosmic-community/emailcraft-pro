@@ -15,6 +15,8 @@ interface UpdateResult {
   message: string
 }
 
+type CampaignStatus = "draft" | "scheduled" | "sending" | "sent" | "paused"
+
 export default function UpdateCampaignModal({ campaign, onClose, onUpdated }: UpdateCampaignModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [updateResult, setUpdateResult] = useState<UpdateResult | null>(null)
@@ -24,7 +26,9 @@ export default function UpdateCampaignModal({ campaign, onClose, onUpdated }: Up
   // Form state
   const [campaignName, setCampaignName] = useState(campaign.metadata.campaign_name || '')
   const [selectedTemplateId, setSelectedTemplateId] = useState(campaign.metadata.email_template?.id || '')
-  const [campaignStatus, setCampaignStatus] = useState(campaign.metadata.campaign_status.key || 'draft')
+  const [campaignStatus, setCampaignStatus] = useState<CampaignStatus>(
+    (campaign.metadata.campaign_status.key as CampaignStatus) || 'draft'
+  )
   const [sendDate, setSendDate] = useState(campaign.metadata.send_date || '')
   const [campaignNotes, setCampaignNotes] = useState(campaign.metadata.campaign_notes || '')
   const [targetTags, setTargetTags] = useState<string[]>(campaign.metadata.target_tags || [])
@@ -141,6 +145,10 @@ export default function UpdateCampaignModal({ campaign, onClose, onUpdated }: Up
     }
   }
 
+  const handleStatusChange = (value: string) => {
+    setCampaignStatus(value as CampaignStatus)
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
@@ -223,7 +231,7 @@ export default function UpdateCampaignModal({ campaign, onClose, onUpdated }: Up
               </label>
               <select
                 value={campaignStatus}
-                onChange={(e) => setCampaignStatus(e.target.value)}
+                onChange={(e) => handleStatusChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 {statusOptions.map((status) => (
