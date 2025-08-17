@@ -10,7 +10,7 @@ interface CampaignListProps {
   campaigns: Campaign[]
 }
 
-function getStatusColor(status: string): string {
+function getStatusColor(status: string | undefined): string {
   const statusLower = status?.toLowerCase() || 'draft'
   switch (statusLower) {
     case 'sent': return 'bg-green-100 text-green-800'
