@@ -52,10 +52,7 @@ export interface Campaign extends CosmicObject {
   metadata: {
     campaign_name: string;
     email_template: EmailTemplate;
-    campaign_status: {
-      key: CampaignStatus;
-      value: string;
-    };
+    campaign_status: any;
     target_tags?: string[];
     send_date?: string;
     campaign_notes?: string;
