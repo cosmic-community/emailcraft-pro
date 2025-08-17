@@ -291,14 +291,14 @@ export default function SendCampaignModal({ campaign, onClose, onSent }: SendCam
                       <input
                         type="date"
                         value={sendDate}
-                        onChange={(e) => setSendDate(e.target.value)}
+                        onChange={(e) => setSendDate(e.target.value || '')}
                         min={new Date().toISOString().split('T')[0]}
                         className="px-3 py-1 border border-gray-300 rounded-md text-sm"
                       />
                       <input
                         type="time"
                         value={sendTime}
-                        onChange={(e) => setSendTime(e.target.value)}
+                        onChange={(e) => setSendTime(e.target.value || '')}
                         className="px-3 py-1 border border-gray-300 rounded-md text-sm"
                       />
                     </div>
