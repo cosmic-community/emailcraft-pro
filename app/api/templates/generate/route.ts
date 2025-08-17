@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       Include inline CSS styles, proper email HTML structure, header, main content area, footer.
       Make it responsive and compatible with email clients. Use modern design principles.
       Return only the HTML code without any explanatory text. No backticks.`,
-      max_tokens: 64000
+      max_tokens: 10000
     })
 
     return NextResponse.json({ html: response.text })
