@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { Campaign } from '@/types'
-import { Calendar, Users, TrendingUp, Mail, Send } from 'lucide-react'
+import { Calendar, Users, TrendingUp, Mail, Send, Edit } from 'lucide-react'
 import SendCampaignModal from './SendCampaignModal'
+import UpdateCampaignModal from './UpdateCampaignModal'
 
 interface CampaignListProps {
   campaigns: Campaign[]
@@ -23,10 +24,44 @@ function getStatusColor(status: string): string {
 export default function CampaignList({ campaigns: initialCampaigns }: CampaignListProps) {
   const [campaigns, setCampaigns] = useState(initialCampaigns)
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
+  const [showSendModal, setShowSendModal] = useState(false)
+  const [showUpdateModal, setShowUpdateModal] = useState(false)
 
   const handleCampaignSent = () => {
     // Refresh the page to get updated campaign data
     window.location.reload()
+  }
+
+  const handleCampaignUpdated = () => {
+    // Refresh the page to get updated campaign data
+    window.location.reload()
+  }
+
+  const handleCampaignClick = (campaign: Campaign) => {
+    setSelectedCampaign(campaign)
+    if (campaign.metadata.campaign_status.key === 'draft' && campaign.metadata.email_template) {
+      setShowSendModal(true)
+    } else {
+      setShowUpdateModal(true)
+    }
+  }
+
+  const handleSendClick = (e: React.MouseEvent, campaign: Campaign) => {
+    e.stopPropagation()
+    setSelectedCampaign(campaign)
+    setShowSendModal(true)
+  }
+
+  const handleEditClick = (e: React.MouseEvent, campaign: Campaign) => {
+    e.stopPropagation()
+    setSelectedCampaign(campaign)
+    setShowUpdateModal(true)
+  }
+
+  const closeModals = () => {
+    setSelectedCampaign(null)
+    setShowSendModal(false)
+    setShowUpdateModal(false)
   }
 
   if (campaigns.length === 0) {
@@ -42,7 +77,11 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
     <>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {campaigns.map((campaign) => (
-          <div key={campaign.id} className="card p-6">
+          <div 
+            key={campaign.id} 
+            className="card p-6 cursor-pointer hover:shadow-lg transition-shadow duration-200"
+            onClick={() => handleCampaignClick(campaign)}
+          >
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-gray-900 mb-1">
@@ -60,13 +99,21 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
                 
                 {campaign.metadata.campaign_status.key === 'draft' && campaign.metadata.email_template && (
                   <button
-                    onClick={() => setSelectedCampaign(campaign)}
+                    onClick={(e) => handleSendClick(e, campaign)}
                     className="inline-flex items-center px-3 py-1 rounded-md text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                   >
                     <Send className="h-3 w-3 mr-1" />
                     Send
                   </button>
                 )}
+                
+                <button
+                  onClick={(e) => handleEditClick(e, campaign)}
+                  className="inline-flex items-center px-3 py-1 rounded-md text-sm bg-gray-600 text-white hover:bg-gray-700 transition-colors"
+                >
+                  <Edit className="h-3 w-3 mr-1" />
+                  Edit
+                </button>
               </div>
             </div>
             
@@ -136,11 +183,19 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
         ))}
       </div>
 
-      {selectedCampaign && (
+      {selectedCampaign && showSendModal && (
         <SendCampaignModal
           campaign={selectedCampaign}
-          onClose={() => setSelectedCampaign(null)}
+          onClose={closeModals}
           onSent={handleCampaignSent}
+        />
+      )}
+
+      {selectedCampaign && showUpdateModal && (
+        <UpdateCampaignModal
+          campaign={selectedCampaign}
+          onClose={closeModals}
+          onUpdated={handleCampaignUpdated}
         />
       )}
     </>
