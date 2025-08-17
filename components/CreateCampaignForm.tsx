@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, X } from 'lucide-react'
-import { createCampaign } from '@/lib/cosmic'
 import { EmailTemplate } from '@/types'
 
 const AVAILABLE_TAGS = [
@@ -53,21 +52,35 @@ export default function CreateCampaignForm() {
     setIsLoading(true)
 
     try {
-      await createCampaign(formData)
-      
-      // Reset form and close modal
-      setFormData({
-        campaign_name: '',
-        email_template: '',
-        campaign_status: 'draft',
-        target_tags: [],
-        send_date: '',
-        campaign_notes: ''
+      // Use server-side API route instead of direct Cosmic SDK call
+      const response = await fetch('/api/campaigns', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       })
-      setIsOpen(false)
-      
-      // Refresh the page to show new campaign
-      window.location.reload()
+
+      const data = await response.json()
+
+      if (data.success) {
+        // Reset form and close modal
+        setFormData({
+          campaign_name: '',
+          email_template: '',
+          campaign_status: 'draft',
+          target_tags: [],
+          send_date: '',
+          campaign_notes: ''
+        })
+        setIsOpen(false)
+        
+        // Refresh the page to show new campaign
+        window.location.reload()
+      } else {
+        console.error('Error creating campaign:', data.error)
+        alert(`Failed to create campaign: ${data.error}`)
+      }
     } catch (error) {
       console.error('Error creating campaign:', error)
       alert('Failed to create campaign. Please try again.')
