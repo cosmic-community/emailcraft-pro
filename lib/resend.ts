@@ -1,10 +1,23 @@
 import { Resend } from 'resend'
 
-if (!process.env.RESEND_API_KEY) {
-  throw new Error('RESEND_API_KEY environment variable is required')
-}
+// Only initialize Resend on server side and only when needed
+let resendInstance: Resend | null = null
 
-export const resend = new Resend(process.env.RESEND_API_KEY)
+function getResendInstance(): Resend {
+  if (typeof window !== 'undefined') {
+    throw new Error('Resend can only be used on the server side')
+  }
+  
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY environment variable is required')
+  }
+
+  if (!resendInstance) {
+    resendInstance = new Resend(process.env.RESEND_API_KEY)
+  }
+  
+  return resendInstance
+}
 
 export interface SendEmailOptions {
   to: string[]
@@ -14,6 +27,7 @@ export interface SendEmailOptions {
 }
 
 export async function sendEmail(options: SendEmailOptions) {
+  const resend = getResendInstance()
   const { to, subject, html, from = 'EmailCraft <noreply@yourdomain.com>' } = options
 
   try {

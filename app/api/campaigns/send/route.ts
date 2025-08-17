@@ -13,21 +13,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const result = await sendCampaign(campaignId)
-
-    if (!result.success) {
+    // Check if Resend API key is configured
+    if (!process.env.RESEND_API_KEY) {
       return NextResponse.json(
         { 
-          error: 'Failed to send campaign',
-          details: result.errors
+          error: 'Email service not configured. Please add RESEND_API_KEY to environment variables.' 
         },
         { status: 500 }
       )
     }
 
+    const result = await sendCampaign(campaignId)
+
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.errors.join(', ') },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json({
       success: true,
-      message: `Campaign sent successfully to ${result.successfulSends} of ${result.totalRecipients} recipients`,
+      message: `Campaign sent successfully to ${result.totalRecipients} recipients`,
       stats: {
         totalRecipients: result.totalRecipients,
         successfulSends: result.successfulSends,
@@ -36,7 +43,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Campaign send API error:', error)
+    console.error('Error in send campaign API:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

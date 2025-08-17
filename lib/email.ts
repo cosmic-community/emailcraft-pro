@@ -144,6 +144,7 @@ async function updateCampaignStats(campaignId: string, stats: {
   }
 }
 
+// This function can be used on both client and server side for validation
 export function validateCampaignForSending(campaign: Campaign): { isValid: boolean; errors: string[] } {
   const errors: string[] = []
 
