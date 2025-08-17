@@ -143,16 +143,17 @@ export async function scheduleCampaign(
       }
     }
 
-    // Update campaign status to scheduled
-    await updateCampaign(campaignId, {
-      metadata: {
-        ...campaign.metadata,
-        campaign_status: { key: 'scheduled', value: 'Scheduled' },
-        send_date: scheduledDate.toISOString().split('T')[0],
-        // Store selected contact IDs for later processing
-        selected_contacts: selectedContactIds || []
-      }
-    })
+    // Update campaign status to scheduled - construct proper update data
+    const updateData = {
+      campaign_status: 'scheduled' as const,
+      send_date: scheduledDate.toISOString().split('T')[0],
+      campaign_name: campaign.metadata.campaign_name,
+      email_template: campaign.metadata.email_template.id,
+      target_tags: selectedContactIds || campaign.metadata.target_tags || [],
+      campaign_notes: campaign.metadata.campaign_notes || ''
+    }
+
+    await updateCampaign(campaignId, updateData)
 
     return {
       success: true,
@@ -342,11 +343,15 @@ async function updateCampaignAfterSending(
     click_rate: 0
   }
 
-  await updateCampaign(campaign.id, {
-    metadata: {
-      ...campaign.metadata,
-      campaign_status: { key: 'sent', value: 'Sent' },
-      campaign_stats: stats
-    }
-  })
+  // Construct proper update data that matches CreateCampaignFormData structure
+  const updateData = {
+    campaign_status: 'sent' as const,
+    campaign_name: campaign.metadata.campaign_name,
+    email_template: campaign.metadata.email_template.id,
+    target_tags: campaign.metadata.target_tags || [],
+    send_date: campaign.metadata.send_date || '',
+    campaign_notes: campaign.metadata.campaign_notes || ''
+  }
+
+  await updateCampaign(campaign.id, updateData)
 }
