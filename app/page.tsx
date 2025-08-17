@@ -6,6 +6,27 @@ import QuickActions from '@/components/QuickActions'
 // Force dynamic rendering for real-time data updates
 export const dynamic = 'force-dynamic'
 
+// Define types for the data structures
+interface Campaign {
+  id: string;
+  metadata: {
+    campaign_status: {
+      key: string;
+    };
+    campaign_stats?: {
+      open_rate?: number;
+    };
+  };
+}
+
+interface Contact {
+  id: string;
+}
+
+interface Template {
+  id: string;
+}
+
 export default async function DashboardPage() {
   const [campaigns, contacts, templates] = await Promise.all([
     getCampaigns(),
@@ -13,12 +34,12 @@ export default async function DashboardPage() {
     getEmailTemplates()
   ])
 
-  // Calculate stats
+  // Calculate stats with proper typing
   const totalContacts = contacts.length
-  const activeCampaigns = campaigns.filter(c => c.metadata.campaign_status.key === 'sending').length
+  const activeCampaigns = (campaigns as Campaign[]).filter((c: Campaign) => c.metadata.campaign_status.key === 'sending').length
   const totalTemplates = templates.length
   const averageOpenRate = campaigns.length > 0 
-    ? campaigns.reduce((acc, c) => acc + (c.metadata.campaign_stats?.open_rate || 0), 0) / campaigns.length
+    ? (campaigns as Campaign[]).reduce((acc: number, c: Campaign) => acc + (c.metadata.campaign_stats?.open_rate || 0), 0) / campaigns.length
     : 0
 
   const stats = {

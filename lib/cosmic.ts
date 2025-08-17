@@ -101,8 +101,8 @@ export async function deleteCampaign(id: string) {
   }
 }
 
-// Template functions
-export async function getTemplates() {
+// Template functions - renamed from getTemplates to getEmailTemplates
+export async function getEmailTemplates() {
   try {
     const { objects } = await cosmic.objects
       .find({ type: 'email-templates' })

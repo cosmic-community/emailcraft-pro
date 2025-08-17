@@ -219,7 +219,7 @@ async function getRecipients(
   // If specific contacts are selected, use those
   if (selectedContactIds && selectedContactIds.length > 0) {
     const allContacts = await getContacts()
-    return allContacts.filter(contact => 
+    return allContacts.filter((contact: Contact) => 
       selectedContactIds.includes(contact.id) &&
       contact.metadata.subscription_status.key === 'subscribed'
     )
@@ -227,15 +227,15 @@ async function getRecipients(
 
   // Otherwise, get contacts based on target tags or all subscribed
   const allContacts = await getContacts()
-  let recipients = allContacts.filter(contact => 
+  let recipients = allContacts.filter((contact: Contact) => 
     contact.metadata.subscription_status.key === 'subscribed'
   )
 
   // Filter by target tags if specified
   if (campaign.metadata.target_tags && campaign.metadata.target_tags.length > 0) {
-    recipients = recipients.filter(contact =>
+    recipients = recipients.filter((contact: Contact) =>
       contact.metadata.tags &&
-      campaign.metadata.target_tags!.some(tag =>
+      campaign.metadata.target_tags!.some((tag: string) =>
         contact.metadata.tags?.includes(tag)
       )
     )
@@ -258,7 +258,7 @@ async function sendEmailsToRecipients(
   for (let i = 0; i < recipients.length; i += batchSize) {
     const batch = recipients.slice(i, i + batchSize)
     
-    const emailPromises = batch.map(async (contact) => {
+    const emailPromises = batch.map(async (contact: Contact) => {
       try {
         // Personalize the content
         let personalizedContent = template.metadata.html_content
@@ -305,7 +305,7 @@ async function sendEmailsToRecipients(
 
     const results = await Promise.all(emailPromises)
     
-    results.forEach(result => {
+    results.forEach((result: { success: boolean; contact: Contact; error?: string }) => {
       if (result.success) {
         successfulSends++
       } else {
