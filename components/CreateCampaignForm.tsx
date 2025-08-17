@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, X } from 'lucide-react'
-import { createCampaign, getEmailTemplates } from '@/lib/cosmic'
+import { createCampaign } from '@/lib/cosmic'
 import { EmailTemplate } from '@/types'
 
 const AVAILABLE_TAGS = [
@@ -35,8 +35,14 @@ export default function CreateCampaignForm() {
 
   const loadTemplates = async () => {
     try {
-      const templatesList = await getEmailTemplates()
-      setTemplates(templatesList)
+      const response = await fetch('/api/templates')
+      const data = await response.json()
+      
+      if (data.success) {
+        setTemplates(data.templates)
+      } else {
+        console.error('Error loading templates:', data.error)
+      }
     } catch (error) {
       console.error('Error loading templates:', error)
     }
