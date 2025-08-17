@@ -7,16 +7,22 @@ import QuickActions from '@/components/QuickActions'
 export const dynamic = 'force-dynamic'
 
 // Define types for the data structures
+interface CampaignStatus {
+  key: string;
+}
+
+interface CampaignStats {
+  open_rate?: number;
+}
+
+interface CampaignMetadata {
+  campaign_status: CampaignStatus;
+  campaign_stats?: CampaignStats;
+}
+
 interface Campaign {
   id: string;
-  metadata: {
-    campaign_status: {
-      key: string;
-    };
-    campaign_stats?: {
-      open_rate?: number;
-    };
-  };
+  metadata: CampaignMetadata;
 }
 
 interface Contact {
@@ -36,10 +42,14 @@ export default async function DashboardPage() {
 
   // Calculate stats with proper typing
   const totalContacts = contacts.length
-  const activeCampaigns = (campaigns as Campaign[]).filter((c: Campaign) => c.metadata.campaign_status.key === 'sending').length
+  const activeCampaigns = (campaigns as Campaign[]).filter((c: Campaign) => 
+    c.metadata?.campaign_status?.key === 'sending'
+  ).length
   const totalTemplates = templates.length
   const averageOpenRate = campaigns.length > 0 
-    ? (campaigns as Campaign[]).reduce((acc: number, c: Campaign) => acc + (c.metadata.campaign_stats?.open_rate || 0), 0) / campaigns.length
+    ? (campaigns as Campaign[]).reduce((acc: number, c: Campaign) => 
+        acc + (c.metadata?.campaign_stats?.open_rate || 0), 0
+      ) / campaigns.length
     : 0
 
   const stats = {

@@ -305,7 +305,13 @@ async function sendEmailsToRecipients(
 
     const results = await Promise.all(emailPromises)
     
-    results.forEach((result: { success: boolean; contact: Contact; error?: string }) => {
+    interface EmailResult {
+      success: boolean;
+      contact: Contact;
+      error?: string;
+    }
+    
+    results.forEach((result: EmailResult) => {
       if (result.success) {
         successfulSends++
       } else {

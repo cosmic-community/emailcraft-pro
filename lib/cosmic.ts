@@ -101,7 +101,7 @@ export async function deleteCampaign(id: string) {
   }
 }
 
-// Template functions - renamed from getTemplates to getEmailTemplates
+// Template functions - keeping getEmailTemplates name for consistency
 export async function getEmailTemplates() {
   try {
     const { objects } = await cosmic.objects
@@ -113,6 +113,9 @@ export async function getEmailTemplates() {
     throw error
   }
 }
+
+// Also export as getTemplates for backward compatibility
+export const getTemplates = getEmailTemplates
 
 export async function getTemplateById(id: string) {
   try {
