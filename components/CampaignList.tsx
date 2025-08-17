@@ -11,7 +11,8 @@ interface CampaignListProps {
 }
 
 function getStatusColor(status: string): string {
-  switch (status.toLowerCase()) {
+  const statusLower = status?.toLowerCase() || 'draft'
+  switch (statusLower) {
     case 'sent': return 'bg-green-100 text-green-800'
     case 'sending': return 'bg-blue-100 text-blue-800'
     case 'scheduled': return 'bg-yellow-100 text-yellow-800'
@@ -24,7 +25,7 @@ function getStatusColor(status: string): string {
 function getStatusValue(campaign: Campaign): string {
   // Handle both string and object formats for backward compatibility
   if (typeof campaign.metadata.campaign_status === 'string') {
-    return campaign.metadata.campaign_status
+    return campaign.metadata.campaign_status || 'Draft'
   }
   return campaign.metadata.campaign_status?.value || 'Draft'
 }
@@ -32,7 +33,7 @@ function getStatusValue(campaign: Campaign): string {
 function getStatusKey(campaign: Campaign): string {
   // Handle both string and object formats for backward compatibility
   if (typeof campaign.metadata.campaign_status === 'string') {
-    return campaign.metadata.campaign_status.toLowerCase()
+    return (campaign.metadata.campaign_status || 'draft').toLowerCase()
   }
   return campaign.metadata.campaign_status?.key || 'draft'
 }
