@@ -112,23 +112,6 @@ export async function getCampaign(slug: string): Promise<Campaign | null> {
   }
 }
 
-// AI Template Generation
-export async function generateEmailTemplate(prompt: string): Promise<string> {
-  try {
-    const response = await cosmic.ai.generateText({
-      prompt: `Create a professional HTML email template with the following requirements: ${prompt}. 
-      Include inline CSS styles, proper email HTML structure, header, main content area, footer.
-      Make it responsive and compatible with email clients. Use modern design principles.`,
-      max_tokens: 1500
-    });
-    
-    return response.text;
-  } catch (error) {
-    console.error('Error generating template:', error);
-    throw new Error('Failed to generate email template');
-  }
-}
-
 // Create functions
 export async function createContact(data: any): Promise<Contact> {
   try {

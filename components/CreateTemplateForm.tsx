@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Plus, X, Zap } from 'lucide-react'
-import { createEmailTemplate, generateEmailTemplate } from '@/lib/cosmic'
+import { createEmailTemplate } from '@/lib/cosmic'
 
 export default function CreateTemplateForm() {
   const [isOpen, setIsOpen] = useState(false)
@@ -53,10 +53,23 @@ export default function CreateTemplateForm() {
 
     setIsGenerating(true)
     try {
-      const generatedHTML = await generateEmailTemplate(formData.ai_prompt)
+      const response = await fetch('/api/templates/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: formData.ai_prompt }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate template')
+      }
+
+      const { html } = await response.json()
+      
       setFormData(prev => ({ 
         ...prev, 
-        html_content: generatedHTML,
+        html_content: html,
         template_name: prev.template_name || 'AI Generated Template',
         subject_line: prev.subject_line || 'Generated Email Template'
       }))
@@ -94,30 +107,6 @@ export default function CreateTemplateForm() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-blue-900 mb-2 flex items-center">
-              <Zap className="h-4 w-4 mr-2" />
-              AI Template Generator
-            </h3>
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={formData.ai_prompt}
-                onChange={(e) => setFormData(prev => ({ ...prev, ai_prompt: e.target.value }))}
-                placeholder="Describe the email template you want (e.g., 'professional newsletter with product highlights')"
-                className="flex-1 input"
-              />
-              <button
-                type="button"
-                onClick={handleAIGenerate}
-                disabled={isGenerating}
-                className="btn btn-primary whitespace-nowrap disabled:opacity-50"
-              >
-                {isGenerating ? 'Generating...' : 'Generate'}
-              </button>
-            </div>
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Template Name *
@@ -165,6 +154,30 @@ export default function CreateTemplateForm() {
               <option value="transactional">Transactional</option>
               <option value="announcement">Announcement</option>
             </select>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-blue-900 mb-2 flex items-center">
+              <Zap className="h-4 w-4 mr-2" />
+              AI Template Generator
+            </h3>
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                value={formData.ai_prompt}
+                onChange={(e) => setFormData(prev => ({ ...prev, ai_prompt: e.target.value }))}
+                placeholder="Describe the email template you want (e.g., 'professional newsletter with product highlights')"
+                className="flex-1 input"
+              />
+              <button
+                type="button"
+                onClick={handleAIGenerate}
+                disabled={isGenerating}
+                className="btn btn-primary whitespace-nowrap disabled:opacity-50"
+              >
+                {isGenerating ? 'Generating...' : 'Generate'}
+              </button>
+            </div>
           </div>
 
           <div>
