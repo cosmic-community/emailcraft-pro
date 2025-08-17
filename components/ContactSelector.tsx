@@ -24,7 +24,8 @@ export default function ContactSelector({
     new Set(selectedContacts.map(c => c.id))
   )
   const [isLoading, setIsLoading] = useState(true)
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'tagged' | 'subscribed'>('all')
+  const [error, setError] = useState<string | null>(null)
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'tagged'>('all')
 
   useEffect(() => {
     fetchContacts()
@@ -36,14 +37,24 @@ export default function ContactSelector({
 
   const fetchContacts = async () => {
     try {
+      setIsLoading(true)
+      setError(null)
+      
       const response = await fetch('/api/contacts')
       const data = await response.json()
       
-      if (data.success) {
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch contacts')
+      }
+
+      if (data.success && Array.isArray(data.contacts)) {
         setContacts(data.contacts)
+      } else {
+        throw new Error('Invalid response format')
       }
     } catch (error) {
       console.error('Failed to fetch contacts:', error)
+      setError(error instanceof Error ? error.message : 'Failed to load contacts')
     } finally {
       setIsLoading(false)
     }
@@ -52,27 +63,35 @@ export default function ContactSelector({
   const filterContacts = () => {
     let filtered = contacts
 
-    // Filter by subscription status
+    // Only show subscribed contacts
     filtered = filtered.filter(contact => 
-      contact.metadata.subscription_status.key === 'subscribed'
+      contact.metadata.subscription_status?.key === 'subscribed' || 
+      contact.metadata.subscription_status?.value === 'Subscribed'
     )
 
-    // Filter by target tags if specified
+    // Filter by target tags if specified and filter is set to 'tagged'
     if (selectedFilter === 'tagged' && targetTags && targetTags.length > 0) {
-      filtered = filtered.filter(contact => 
-        contact.metadata.tags && 
-        targetTags.some(tag => contact.metadata.tags?.includes(tag))
-      )
+      filtered = filtered.filter(contact => {
+        const contactTags = contact.metadata.tags
+        if (!contactTags || !Array.isArray(contactTags)) return false
+        
+        return targetTags.some(tag => contactTags.includes(tag))
+      })
     }
 
     // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
-      filtered = filtered.filter(contact => 
-        contact.metadata.email.toLowerCase().includes(term) ||
-        contact.metadata.first_name?.toLowerCase().includes(term) ||
-        contact.metadata.last_name?.toLowerCase().includes(term)
-      )
+      filtered = filtered.filter(contact => {
+        const email = contact.metadata.email?.toLowerCase() || ''
+        const firstName = contact.metadata.first_name?.toLowerCase() || ''
+        const lastName = contact.metadata.last_name?.toLowerCase() || ''
+        
+        return email.includes(term) || 
+               firstName.includes(term) || 
+               lastName.includes(term) ||
+               `${firstName} ${lastName}`.includes(term)
+      })
     }
 
     setFilteredContacts(filtered)
@@ -103,6 +122,17 @@ export default function ContactSelector({
     const selected = contacts.filter(contact => selectedIds.has(contact.id))
     onSelect(selected)
     onClose()
+  }
+
+  const getContactName = (contact: Contact) => {
+    const firstName = contact.metadata.first_name || ''
+    const lastName = contact.metadata.last_name || ''
+    
+    if (firstName || lastName) {
+      return `${firstName} ${lastName}`.trim()
+    }
+    
+    return contact.metadata.email
   }
 
   return (
@@ -152,7 +182,7 @@ export default function ContactSelector({
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  With Target Tags
+                  With Target Tags ({targetTags.join(', ')})
                 </button>
               )}
             </div>
@@ -161,6 +191,7 @@ export default function ContactSelector({
               <button
                 onClick={handleSelectAll}
                 className="text-sm text-blue-600 hover:text-blue-700"
+                disabled={filteredContacts.length === 0}
               >
                 Select All ({filteredContacts.length})
               </button>
@@ -179,13 +210,32 @@ export default function ContactSelector({
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="ml-3 text-gray-600">Loading contacts...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <div className="text-red-500 mb-2">❌ Error loading contacts</div>
+              <p className="text-gray-500 text-sm">{error}</p>
+              <button 
+                onClick={fetchContacts}
+                className="mt-3 text-blue-600 hover:text-blue-700 text-sm"
+              >
+                Try again
+              </button>
             </div>
           ) : filteredContacts.length === 0 ? (
             <div className="text-center py-8">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">
-                {searchTerm ? 'No contacts found matching your search.' : 'No contacts available.'}
+              <p className="text-gray-500 mb-2">
+                {searchTerm || selectedFilter === 'tagged' 
+                  ? 'No contacts found matching your criteria.' 
+                  : 'No subscribed contacts available.'}
               </p>
+              {contacts.length > 0 && (
+                <p className="text-sm text-gray-400">
+                  Total contacts in system: {contacts.length}
+                </p>
+              )}
             </div>
           ) : (
             <div className="space-y-2">
@@ -213,13 +263,18 @@ export default function ContactSelector({
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">
-                            {contact.metadata.first_name} {contact.metadata.last_name}
+                            {getContactName(contact)}
                           </p>
                           <p className="text-sm text-gray-600">{contact.metadata.email}</p>
+                          {contact.metadata.date_subscribed && (
+                            <p className="text-xs text-gray-500">
+                              Subscribed: {contact.metadata.date_subscribed}
+                            </p>
+                          )}
                         </div>
                       </div>
-                      {contact.metadata.tags && contact.metadata.tags.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
+                      {contact.metadata.tags && Array.isArray(contact.metadata.tags) && contact.metadata.tags.length > 0 && (
+                        <div className="mt-2 ml-7 flex flex-wrap gap-1">
                           {contact.metadata.tags.map((tag) => (
                             <span
                               key={tag}
@@ -258,6 +313,7 @@ export default function ContactSelector({
               <button
                 onClick={handleConfirm}
                 className="btn btn-primary"
+                disabled={selectedIds.size === 0}
               >
                 Confirm Selection
               </button>
