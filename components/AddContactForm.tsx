@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
-import { createContact } from '@/lib/cosmic'
 import { SubscriptionStatus } from '@/types'
 
 const AVAILABLE_TAGS = [
@@ -31,10 +30,21 @@ export default function AddContactForm() {
     setIsLoading(true)
 
     try {
-      await createContact({
-        ...formData,
-        date_subscribed: new Date().toISOString().split('T')[0]
+      const response = await fetch('/api/contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...formData,
+          date_subscribed: new Date().toISOString().split('T')[0]
+        })
       })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create contact')
+      }
       
       // Reset form and close modal
       setFormData({
@@ -51,7 +61,7 @@ export default function AddContactForm() {
       window.location.reload()
     } catch (error) {
       console.error('Error creating contact:', error)
-      alert('Failed to create contact. Please try again.')
+      alert(error instanceof Error ? error.message : 'Failed to create contact. Please try again.')
     } finally {
       setIsLoading(false)
     }
