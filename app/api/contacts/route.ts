@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createContact } from '@/lib/cosmic'
+import { createContact, getContacts } from '@/lib/cosmic'
+
+export async function GET() {
+  try {
+    const contacts = await getContacts()
+    return NextResponse.json({ contacts })
+  } catch (error) {
+    console.error('Error fetching contacts:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch contacts' },
+      { status: 500 }
+    )
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
