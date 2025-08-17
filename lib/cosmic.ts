@@ -4,6 +4,7 @@ import { createBucketClient } from '@cosmicjs/sdk'
 export const cosmic = createBucketClient({
   bucketSlug: process.env.COSMIC_BUCKET_SLUG as string,
   readKey: process.env.COSMIC_READ_KEY as string,
+  apiEnvironment: 'staging'
 })
 
 // Create bucket client for write operations (server-side only)
@@ -11,6 +12,7 @@ export const cosmicWrite = createBucketClient({
   bucketSlug: process.env.COSMIC_BUCKET_SLUG as string,
   readKey: process.env.COSMIC_READ_KEY as string,
   writeKey: process.env.COSMIC_WRITE_KEY as string,
+  apiEnvironment: 'staging'
 })
 
 // Campaign functions
@@ -101,7 +103,7 @@ export async function deleteCampaign(id: string) {
   }
 }
 
-// Template functions - keeping getEmailTemplates name for consistency
+// Template functions - renamed from getTemplates to getEmailTemplates
 export async function getEmailTemplates() {
   try {
     const { objects } = await cosmic.objects
@@ -113,9 +115,6 @@ export async function getEmailTemplates() {
     throw error
   }
 }
-
-// Also export as getTemplates for backward compatibility
-export const getTemplates = getEmailTemplates
 
 export async function getTemplateById(id: string) {
   try {
