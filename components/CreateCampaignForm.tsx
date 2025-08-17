@@ -52,13 +52,18 @@ export default function CreateCampaignForm() {
     setIsLoading(true)
 
     try {
-      // Use server-side API route instead of direct Cosmic SDK call
+      // Prepare the data with proper title and formatting
+      const campaignData = {
+        title: formData.campaign_name, // Use campaign name as title
+        ...formData
+      }
+
       const response = await fetch('/api/campaigns', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(campaignData),
       })
 
       const data = await response.json()
