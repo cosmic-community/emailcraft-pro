@@ -16,8 +16,8 @@ export async function getContacts(): Promise<Contact[]> {
       .depth(1)
     
     return objects as Contact[]
-  } catch (error) {
-    if (error.status === 404) {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
       return []
     }
     throw error
@@ -32,8 +32,8 @@ export async function getContactById(id: string): Promise<Contact | null> {
       .depth(1)
     
     return object as Contact
-  } catch (error) {
-    if (error.status === 404) {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
       return null
     }
     throw error
@@ -80,8 +80,8 @@ export async function getEmailTemplates(): Promise<EmailTemplate[]> {
       .depth(1)
     
     return objects as EmailTemplate[]
-  } catch (error) {
-    if (error.status === 404) {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
       return []
     }
     throw error
@@ -96,8 +96,8 @@ export async function getEmailTemplateById(id: string): Promise<EmailTemplate | 
       .depth(1)
     
     return object as EmailTemplate
-  } catch (error) {
-    if (error.status === 404) {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
       return null
     }
     throw error
@@ -144,8 +144,8 @@ export async function getCampaigns(): Promise<Campaign[]> {
       .depth(1)
     
     return objects as Campaign[]
-  } catch (error) {
-    if (error.status === 404) {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
       return []
     }
     throw error
@@ -160,8 +160,8 @@ export async function getCampaignById(id: string): Promise<Campaign | null> {
       .depth(1)
     
     return object as Campaign
-  } catch (error) {
-    if (error.status === 404) {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
       return null
     }
     throw error
