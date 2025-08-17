@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { createContact } from '@/lib/cosmic'
+import { SubscriptionStatus } from '@/types'
 
 const AVAILABLE_TAGS = [
   'Newsletter',
@@ -20,7 +21,7 @@ export default function AddContactForm() {
     email: '',
     first_name: '',
     last_name: '',
-    subscription_status: 'subscribed' as const,
+    subscription_status: 'subscribed' as SubscriptionStatus,
     tags: [] as string[],
     notes: ''
   })
@@ -40,7 +41,7 @@ export default function AddContactForm() {
         email: '',
         first_name: '',
         last_name: '',
-        subscription_status: 'subscribed',
+        subscription_status: 'subscribed' as SubscriptionStatus,
         tags: [],
         notes: ''
       })
@@ -138,7 +139,7 @@ export default function AddContactForm() {
               value={formData.subscription_status}
               onChange={(e) => setFormData(prev => ({ 
                 ...prev, 
-                subscription_status: e.target.value as 'subscribed' | 'unsubscribed' | 'pending'
+                subscription_status: e.target.value as SubscriptionStatus
               }))}
               className="input"
             >
