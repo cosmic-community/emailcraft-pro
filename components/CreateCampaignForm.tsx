@@ -20,7 +20,7 @@ export default function CreateCampaignForm() {
   const [formData, setFormData] = useState({
     campaign_name: '',
     email_template: '',
-    campaign_status: 'draft' as const,
+    campaign_status: 'Draft' as const, // Use string value directly
     target_tags: [] as string[],
     send_date: '',
     campaign_notes: ''
@@ -73,7 +73,7 @@ export default function CreateCampaignForm() {
         setFormData({
           campaign_name: '',
           email_template: '',
-          campaign_status: 'draft',
+          campaign_status: 'Draft',
           target_tags: [],
           send_date: '',
           campaign_notes: ''
@@ -179,11 +179,11 @@ export default function CreateCampaignForm() {
               }))}
               className="input"
             >
-              <option value="draft">Draft</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="sending">Sending</option>
-              <option value="sent">Sent</option>
-              <option value="paused">Paused</option>
+              <option value="Draft">Draft</option>
+              <option value="Scheduled">Scheduled</option>
+              <option value="Sending">Sending</option>
+              <option value="Sent">Sent</option>
+              <option value="Paused">Paused</option>
             </select>
           </div>
 

@@ -11,7 +11,7 @@ interface CampaignListProps {
 }
 
 function getStatusColor(status: string): string {
-  switch (status) {
+  switch (status.toLowerCase()) {
     case 'sent': return 'bg-green-100 text-green-800'
     case 'sending': return 'bg-blue-100 text-blue-800'
     case 'scheduled': return 'bg-yellow-100 text-yellow-800'
@@ -19,6 +19,22 @@ function getStatusColor(status: string): string {
     case 'paused': return 'bg-red-100 text-red-800'
     default: return 'bg-gray-100 text-gray-800'
   }
+}
+
+function getStatusValue(campaign: Campaign): string {
+  // Handle both string and object formats for backward compatibility
+  if (typeof campaign.metadata.campaign_status === 'string') {
+    return campaign.metadata.campaign_status
+  }
+  return campaign.metadata.campaign_status.value || 'Draft'
+}
+
+function getStatusKey(campaign: Campaign): string {
+  // Handle both string and object formats for backward compatibility
+  if (typeof campaign.metadata.campaign_status === 'string') {
+    return campaign.metadata.campaign_status.toLowerCase()
+  }
+  return campaign.metadata.campaign_status.key || 'draft'
 }
 
 export default function CampaignList({ campaigns: initialCampaigns }: CampaignListProps) {
@@ -39,7 +55,7 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
 
   const handleCampaignClick = (campaign: Campaign) => {
     setSelectedCampaign(campaign)
-    if (campaign.metadata.campaign_status.key === 'draft' && campaign.metadata.email_template) {
+    if (getStatusKey(campaign) === 'draft' && campaign.metadata.email_template) {
       setShowSendModal(true)
     } else {
       setShowUpdateModal(true)
@@ -93,11 +109,11 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
               </div>
               
               <div className="flex items-center space-x-2">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(campaign.metadata.campaign_status.key)}`}>
-                  {campaign.metadata.campaign_status.value}
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(getStatusValue(campaign))}`}>
+                  {getStatusValue(campaign)}
                 </span>
                 
-                {campaign.metadata.campaign_status.key === 'draft' && campaign.metadata.email_template && (
+                {getStatusKey(campaign) === 'draft' && campaign.metadata.email_template && (
                   <button
                     onClick={(e) => handleSendClick(e, campaign)}
                     className="inline-flex items-center px-3 py-1 rounded-md text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors"

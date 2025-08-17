@@ -15,7 +15,7 @@ interface UpdateResult {
   message: string
 }
 
-type CampaignStatus = "draft" | "scheduled" | "sending" | "sent" | "paused"
+type CampaignStatus = "Draft" | "Scheduled" | "Sending" | "Sent" | "Paused"
 
 export default function UpdateCampaignModal({ campaign, onClose, onUpdated }: UpdateCampaignModalProps) {
   const [isLoading, setIsLoading] = useState(false)
@@ -27,7 +27,10 @@ export default function UpdateCampaignModal({ campaign, onClose, onUpdated }: Up
   const [campaignName, setCampaignName] = useState(campaign.metadata.campaign_name || '')
   const [selectedTemplateId, setSelectedTemplateId] = useState(campaign.metadata.email_template?.id || '')
   const [campaignStatus, setCampaignStatus] = useState<CampaignStatus>(
-    (campaign.metadata.campaign_status.key as CampaignStatus) || 'draft'
+    // Handle both string and object formats for backward compatibility
+    typeof campaign.metadata.campaign_status === 'string' 
+      ? (campaign.metadata.campaign_status as CampaignStatus)
+      : (campaign.metadata.campaign_status.value as CampaignStatus) || 'Draft'
   )
   const [sendDate, setSendDate] = useState(campaign.metadata.send_date || '')
   const [campaignNotes, setCampaignNotes] = useState(campaign.metadata.campaign_notes || '')
@@ -40,12 +43,6 @@ export default function UpdateCampaignModal({ campaign, onClose, onUpdated }: Up
     'New Subscriber',
     'Technology',
     'Marketing'
-  ]
-
-  const statusOptions = [
-    { key: 'draft', value: 'Draft' },
-    { key: 'scheduled', value: 'Scheduled' },
-    { key: 'paused', value: 'Paused' }
   ]
 
   // Load templates
@@ -97,7 +94,7 @@ export default function UpdateCampaignModal({ campaign, onClose, onUpdated }: Up
             slug: selectedTemplate.slug,
             title: selectedTemplate.title
           } : null,
-          campaign_status: statusOptions.find(s => s.key === campaignStatus) || { key: 'draft', value: 'Draft' },
+          campaign_status: campaignStatus, // Use string value directly
           target_tags: targetTags.length > 0 ? targetTags : null,
           send_date: sendDate || null,
           campaign_notes: campaignNotes || null,
@@ -234,11 +231,9 @@ export default function UpdateCampaignModal({ campaign, onClose, onUpdated }: Up
                 onChange={(e) => handleStatusChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                {statusOptions.map((status) => (
-                  <option key={status.key} value={status.key}>
-                    {status.value}
-                  </option>
-                ))}
+                <option value="Draft">Draft</option>
+                <option value="Scheduled">Scheduled</option>
+                <option value="Paused">Paused</option>
               </select>
             </div>
 
