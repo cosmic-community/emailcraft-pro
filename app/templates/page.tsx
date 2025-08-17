@@ -2,6 +2,9 @@ import { getEmailTemplates } from '@/lib/cosmic'
 import TemplateGrid from '@/components/TemplateGrid'
 import CreateTemplateForm from '@/components/CreateTemplateForm'
 
+// Force dynamic rendering for real-time data updates
+export const dynamic = 'force-dynamic'
+
 export default async function TemplatesPage() {
   const templates = await getEmailTemplates()
 

@@ -2,6 +2,9 @@ import { getCampaigns } from '@/lib/cosmic'
 import CampaignList from '@/components/CampaignList'
 import CreateCampaignForm from '@/components/CreateCampaignForm'
 
+// Force dynamic rendering for real-time data updates
+export const dynamic = 'force-dynamic'
+
 export default async function CampaignsPage() {
   const campaigns = await getCampaigns()
 

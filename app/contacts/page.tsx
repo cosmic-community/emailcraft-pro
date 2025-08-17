@@ -3,6 +3,9 @@ import ContactList from '@/components/ContactList'
 import AddContactForm from '@/components/AddContactForm'
 import { Plus } from 'lucide-react'
 
+// Force dynamic rendering for real-time data updates
+export const dynamic = 'force-dynamic'
+
 export default async function ContactsPage() {
   const contacts = await getContacts()
 

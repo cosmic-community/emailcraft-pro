@@ -3,6 +3,9 @@ import DashboardStats from '@/components/DashboardStats'
 import RecentCampaigns from '@/components/RecentCampaigns'
 import QuickActions from '@/components/QuickActions'
 
+// Force dynamic rendering for real-time data updates
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardPage() {
   const [campaigns, contacts, templates] = await Promise.all([
     getCampaigns(),
