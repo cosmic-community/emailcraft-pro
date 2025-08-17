@@ -26,38 +26,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create the template object in Cosmic
+    // Create the template object in Cosmic with proper structure
     const { object } = await cosmic.objects.insertOne({
       title: template_name,
       type: 'email-templates',
       status: 'published',
-      metafields: [
-        {
-          key: 'template_name',
-          type: 'text',
-          value: template_name
-        },
-        {
-          key: 'subject_line',
-          type: 'text',
-          value: subject_line
-        },
-        {
-          key: 'html_content',
-          type: 'html-textarea',
-          value: html_content
-        },
-        {
-          key: 'template_category',
-          type: 'select-dropdown',
-          value: template_category || 'newsletter'
-        },
-        {
-          key: 'template_description',
-          type: 'textarea',
-          value: template_description || ''
-        }
-      ]
+      metadata: {
+        template_name: template_name,
+        subject_line: subject_line,
+        html_content: html_content,
+        template_category: template_category || 'newsletter',
+        template_description: template_description || ''
+      }
     })
 
     return NextResponse.json({ 
