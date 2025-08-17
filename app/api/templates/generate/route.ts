@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       prompt: `Create a professional HTML email template with the following requirements: ${prompt}. 
       Include inline CSS styles, proper email HTML structure, header, main content area, footer.
       Make it responsive and compatible with email clients. Use modern design principles.
-      Return only the HTML code without any explanatory text.`,
+      Return only the HTML code without any explanatory text. No backticks.`,
       max_tokens: 64000
     })
 
