@@ -1,5 +1,9 @@
+'use client'
+
+import { useState } from 'react'
 import { Campaign } from '@/types'
-import { Calendar, Users, TrendingUp, Mail } from 'lucide-react'
+import { Calendar, Users, TrendingUp, Mail, Send } from 'lucide-react'
+import SendCampaignModal from './SendCampaignModal'
 
 interface CampaignListProps {
   campaigns: Campaign[]
@@ -16,7 +20,15 @@ function getStatusColor(status: string): string {
   }
 }
 
-export default function CampaignList({ campaigns }: CampaignListProps) {
+export default function CampaignList({ campaigns: initialCampaigns }: CampaignListProps) {
+  const [campaigns, setCampaigns] = useState(initialCampaigns)
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
+
+  const handleCampaignSent = () => {
+    // Refresh the page to get updated campaign data
+    window.location.reload()
+  }
+
   if (campaigns.length === 0) {
     return (
       <div className="card p-8 text-center">
@@ -27,88 +39,110 @@ export default function CampaignList({ campaigns }: CampaignListProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {campaigns.map((campaign) => (
-        <div key={campaign.id} className="card p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                {campaign.metadata.campaign_name}
-              </h3>
-              <p className="text-sm text-gray-600">
-                Template: {campaign.metadata.email_template?.title || 'No template selected'}
-              </p>
-            </div>
-            
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(campaign.metadata.campaign_status.key)}`}>
-              {campaign.metadata.campaign_status.value}
-            </span>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            {campaign.metadata.send_date && (
-              <div className="flex items-center text-sm text-gray-600">
-                <Calendar className="h-4 w-4 mr-2" />
-                <span>{new Date(campaign.metadata.send_date).toLocaleDateString()}</span>
+    <>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {campaigns.map((campaign) => (
+          <div key={campaign.id} className="card p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                  {campaign.metadata.campaign_name}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Template: {campaign.metadata.email_template?.metadata?.template_name || 'No template selected'}
+                </p>
               </div>
-            )}
-            
-            {campaign.metadata.campaign_stats && (
-              <div className="flex items-center text-sm text-gray-600">
-                <Users className="h-4 w-4 mr-2" />
-                <span>{campaign.metadata.campaign_stats.recipients} recipients</span>
-              </div>
-            )}
-          </div>
-          
-          {campaign.metadata.campaign_stats && campaign.metadata.campaign_stats.open_rate > 0 && (
-            <div className="border-t border-gray-200 pt-4">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-lg font-semibold text-gray-900">
-                    {Math.round(campaign.metadata.campaign_stats.open_rate * 100)}%
-                  </p>
-                  <p className="text-xs text-gray-500">Open Rate</p>
-                </div>
-                <div>
-                  <p className="text-lg font-semibold text-gray-900">
-                    {Math.round(campaign.metadata.campaign_stats.click_rate * 100)}%
-                  </p>
-                  <p className="text-xs text-gray-500">Click Rate</p>
-                </div>
-                <div>
-                  <p className="text-lg font-semibold text-gray-900">
-                    {campaign.metadata.campaign_stats.delivered}
-                  </p>
-                  <p className="text-xs text-gray-500">Delivered</p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {campaign.metadata.target_tags && campaign.metadata.target_tags.length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs text-gray-500 mb-2">Target Tags:</p>
-              <div className="flex flex-wrap gap-1">
-                {campaign.metadata.target_tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-blue-100 text-blue-800"
+              
+              <div className="flex items-center space-x-2">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(campaign.metadata.campaign_status.key)}`}>
+                  {campaign.metadata.campaign_status.value}
+                </span>
+                
+                {campaign.metadata.campaign_status.key === 'draft' && campaign.metadata.email_template && (
+                  <button
+                    onClick={() => setSelectedCampaign(campaign)}
+                    className="inline-flex items-center px-3 py-1 rounded-md text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                   >
-                    {tag}
-                  </span>
-                ))}
+                    <Send className="h-3 w-3 mr-1" />
+                    Send
+                  </button>
+                )}
               </div>
             </div>
-          )}
-          
-          {campaign.metadata.campaign_notes && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-xs text-gray-500">{campaign.metadata.campaign_notes}</p>
+            
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              {campaign.metadata.send_date && (
+                <div className="flex items-center text-sm text-gray-600">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <span>{new Date(campaign.metadata.send_date).toLocaleDateString()}</span>
+                </div>
+              )}
+              
+              {campaign.metadata.campaign_stats && (
+                <div className="flex items-center text-sm text-gray-600">
+                  <Users className="h-4 w-4 mr-2" />
+                  <span>{campaign.metadata.campaign_stats.recipients} recipients</span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      ))}
-    </div>
+            
+            {campaign.metadata.campaign_stats && campaign.metadata.campaign_stats.open_rate > 0 && (
+              <div className="border-t border-gray-200 pt-4">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {Math.round(campaign.metadata.campaign_stats.open_rate * 100)}%
+                    </p>
+                    <p className="text-xs text-gray-500">Open Rate</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {Math.round(campaign.metadata.campaign_stats.click_rate * 100)}%
+                    </p>
+                    <p className="text-xs text-gray-500">Click Rate</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {campaign.metadata.campaign_stats.delivered}
+                    </p>
+                    <p className="text-xs text-gray-500">Delivered</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {campaign.metadata.target_tags && campaign.metadata.target_tags.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs text-gray-500 mb-2">Target Tags:</p>
+                <div className="flex flex-wrap gap-1">
+                  {campaign.metadata.target_tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-blue-100 text-blue-800"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {campaign.metadata.campaign_notes && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <p className="text-xs text-gray-500">{campaign.metadata.campaign_notes}</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {selectedCampaign && (
+        <SendCampaignModal
+          campaign={selectedCampaign}
+          onClose={() => setSelectedCampaign(null)}
+          onSent={handleCampaignSent}
+        />
+      )}
+    </>
   )
 }
