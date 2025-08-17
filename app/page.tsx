@@ -1,4 +1,4 @@
-import { getCampaigns, getContacts, getEmailTemplates } from '@/lib/cosmic'
+import { getCampaigns, getContacts, getTemplates } from '@/lib/cosmic'
 import DashboardStats from '@/components/DashboardStats'
 import RecentCampaigns from '@/components/RecentCampaigns'
 import QuickActions from '@/components/QuickActions'
@@ -37,7 +37,7 @@ export default async function DashboardPage() {
   const [campaigns, contacts, templates] = await Promise.all([
     getCampaigns(),
     getContacts(),
-    getEmailTemplates()
+    getTemplates()
   ])
 
   // Calculate stats with proper typing

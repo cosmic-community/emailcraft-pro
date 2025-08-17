@@ -23,8 +23,8 @@ export async function getContacts(): Promise<Contact[]> {
       .depth(1)
 
     return objects as Contact[]
-  } catch (error) {
-    if (error.status === 404) {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
       return []
     }
     throw error
@@ -39,7 +39,7 @@ export async function createContact(data: CreateContactFormData): Promise<Contac
       email: data.email,
       first_name: data.first_name || '',
       last_name: data.last_name || '',
-      subscription_status: data.subscription_status, // Use string value directly
+      subscription_status: data.subscription_status,
       tags: data.tags || null,
       date_subscribed: data.date_subscribed || '',
       notes: data.notes || ''
@@ -59,13 +59,16 @@ export async function getTemplates(): Promise<EmailTemplate[]> {
       .depth(1)
 
     return objects as EmailTemplate[]
-  } catch (error) {
-    if (error.status === 404) {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
       return []
     }
     throw error
   }
 }
+
+// Add missing export alias for getEmailTemplates
+export const getEmailTemplates = getTemplates
 
 export async function createTemplate(data: CreateTemplateFormData): Promise<EmailTemplate> {
   const templateData = {
@@ -75,7 +78,7 @@ export async function createTemplate(data: CreateTemplateFormData): Promise<Emai
       template_name: data.template_name,
       subject_line: data.subject_line,
       html_content: data.html_content,
-      template_category: data.template_category || '', // Use string value directly
+      template_category: data.template_category || '',
       template_description: data.template_description || ''
     }
   }
@@ -93,9 +96,25 @@ export async function getCampaigns(): Promise<Campaign[]> {
       .depth(1)
 
     return objects as Campaign[]
-  } catch (error) {
-    if (error.status === 404) {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
       return []
+    }
+    throw error
+  }
+}
+
+export async function getCampaignById(id: string): Promise<Campaign | null> {
+  try {
+    const { object } = await cosmicRead.objects
+      .findOne({ type: 'campaigns', id })
+      .props(['id', 'title', 'slug', 'metadata'])
+      .depth(1)
+
+    return object as Campaign
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+      return null
     }
     throw error
   }
@@ -108,7 +127,7 @@ export async function createCampaign(data: CreateCampaignFormData): Promise<Camp
     metadata: {
       campaign_name: data.campaign_name,
       email_template: data.email_template,
-      campaign_status: data.campaign_status, // Use string value directly
+      campaign_status: data.campaign_status,
       target_tags: data.target_tags && data.target_tags.length > 0 ? data.target_tags : null,
       send_date: data.send_date || null,
       campaign_notes: data.campaign_notes || null,
@@ -156,7 +175,7 @@ export async function getDashboardStats() {
       totalCampaigns,
       sentCampaigns
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching dashboard stats:', error)
     return {
       totalContacts: 0,

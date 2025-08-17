@@ -26,7 +26,7 @@ function getStatusValue(campaign: Campaign): string {
   if (typeof campaign.metadata.campaign_status === 'string') {
     return campaign.metadata.campaign_status
   }
-  return campaign.metadata.campaign_status.value || 'Draft'
+  return campaign.metadata.campaign_status?.value || 'Draft'
 }
 
 function getStatusKey(campaign: Campaign): string {
@@ -34,7 +34,7 @@ function getStatusKey(campaign: Campaign): string {
   if (typeof campaign.metadata.campaign_status === 'string') {
     return campaign.metadata.campaign_status.toLowerCase()
   }
-  return campaign.metadata.campaign_status.key || 'draft'
+  return campaign.metadata.campaign_status?.key || 'draft'
 }
 
 export default function CampaignList({ campaigns: initialCampaigns }: CampaignListProps) {

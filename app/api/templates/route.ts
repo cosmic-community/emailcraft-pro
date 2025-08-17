@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getEmailTemplates } from '@/lib/cosmic'
+import { getTemplates } from '@/lib/cosmic'
 
 export async function GET(request: NextRequest) {
   try {
-    const templates = await getEmailTemplates()
+    const templates = await getTemplates()
     
     return NextResponse.json({
       success: true,

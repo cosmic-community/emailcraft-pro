@@ -1,4 +1,4 @@
-import { getEmailTemplates } from '@/lib/cosmic'
+import { getTemplates } from '@/lib/cosmic'
 import TemplateGrid from '@/components/TemplateGrid'
 import CreateTemplateForm from '@/components/CreateTemplateForm'
 
@@ -6,7 +6,7 @@ import CreateTemplateForm from '@/components/CreateTemplateForm'
 export const dynamic = 'force-dynamic'
 
 export default async function TemplatesPage() {
-  const templates = await getEmailTemplates()
+  const templates = await getTemplates()
 
   return (
     <div className="p-8">
