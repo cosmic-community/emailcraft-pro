@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Plus, X, Zap } from 'lucide-react'
-import { createEmailTemplate } from '@/lib/cosmic'
 
 export default function CreateTemplateForm() {
   const [isOpen, setIsOpen] = useState(false)
@@ -22,7 +21,26 @@ export default function CreateTemplateForm() {
     setIsLoading(true)
 
     try {
-      await createEmailTemplate(formData)
+      const response = await fetch('/api/templates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          template_name: formData.template_name,
+          subject_line: formData.subject_line,
+          html_content: formData.html_content,
+          template_category: formData.template_category,
+          template_description: formData.template_description
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create template')
+      }
+
+      const result = await response.json()
       
       // Reset form and close modal
       setFormData({
@@ -39,7 +57,7 @@ export default function CreateTemplateForm() {
       window.location.reload()
     } catch (error) {
       console.error('Error creating template:', error)
-      alert('Failed to create template. Please try again.')
+      alert(error instanceof Error ? error.message : 'Failed to create template. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -62,7 +80,8 @@ export default function CreateTemplateForm() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to generate template')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to generate template')
       }
 
       const { html } = await response.json()
@@ -75,7 +94,7 @@ export default function CreateTemplateForm() {
       }))
     } catch (error) {
       console.error('Error generating template:', error)
-      alert('Failed to generate template. Please try again.')
+      alert(error instanceof Error ? error.message : 'Failed to generate template. Please try again.')
     } finally {
       setIsGenerating(false)
     }
