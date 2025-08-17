@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Send, Clock, Mail, AlertTriangle, CheckCircle, Users } from 'lucide-react'
+import { X, Send, Mail, AlertTriangle, CheckCircle, Users } from 'lucide-react'
 import { Campaign, Contact } from '@/types'
 import ContactSelector from './ContactSelector'
 import TestEmailModal from './TestEmailModal'
@@ -26,19 +26,9 @@ export default function SendCampaignModal({ campaign, onClose, onSent }: SendCam
   const [isLoading, setIsLoading] = useState(false)
   const [sendResult, setSendResult] = useState<SendResult | null>(null)
   const [selectedContacts, setSelectedContacts] = useState<Contact[]>([])
-  const [sendDate, setSendDate] = useState('')
-  const [sendTime, setSendTime] = useState('')
   const [showContactSelector, setShowContactSelector] = useState(false)
   const [showTestModal, setShowTestModal] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
-
-  // Set default send date/time to current + 1 hour
-  useEffect(() => {
-    const now = new Date()
-    now.setHours(now.getHours() + 1)
-    setSendDate(now.toISOString().split('T')[0])
-    setSendTime(now.toTimeString().slice(0, 5))
-  }, [])
 
   // Validate campaign
   useEffect(() => {
@@ -93,43 +83,6 @@ export default function SendCampaignModal({ campaign, onClose, onSent }: SendCam
     }
   }
 
-  const handleSchedule = async () => {
-    if (validationErrors.length > 0 || !sendDate || !sendTime) return
-
-    setIsLoading(true)
-    try {
-      const scheduledDateTime = new Date(`${sendDate}T${sendTime}:00`)
-      
-      const response = await fetch('/api/campaigns/schedule', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          campaignId: campaign.id,
-          scheduledDate: scheduledDateTime.toISOString(),
-          selectedContacts: selectedContacts.map(c => c.id)
-        }),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to schedule campaign')
-      }
-
-      setSendResult(result)
-      onSent()
-    } catch (error) {
-      setSendResult({
-        success: false,
-        message: error instanceof Error ? error.message : 'Failed to schedule campaign'
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   const getRecipientCount = () => {
     if (selectedContacts.length > 0) {
       return selectedContacts.length
@@ -162,9 +115,7 @@ export default function SendCampaignModal({ campaign, onClose, onSent }: SendCam
               {sendResult.success ? (
                 <>
                   <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {sendResult.message.includes('scheduled') ? 'Campaign Scheduled!' : 'Campaign Sent!'}
-                  </h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Campaign Sent!</h3>
                   <p className="text-gray-600 mb-4">{sendResult.message}</p>
                   {sendResult.stats && (
                     <div className="bg-gray-50 rounded-lg p-4 mb-4">
@@ -280,31 +231,6 @@ export default function SendCampaignModal({ campaign, onClose, onSent }: SendCam
                   </div>
                 </div>
 
-                {/* Schedule Options */}
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-3 block">
-                    Send Options
-                  </label>
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-4">
-                      <label className="text-sm text-gray-600">Schedule for:</label>
-                      <input
-                        type="date"
-                        value={sendDate}
-                        onChange={(e) => setSendDate(e.target.value ?? '')}
-                        min={new Date().toISOString().split('T')[0]}
-                        className="px-3 py-1 border border-gray-300 rounded-md text-sm"
-                      />
-                      <input
-                        type="time"
-                        value={sendTime}
-                        onChange={(e) => setSendTime(e.target.value ?? '')}
-                        className="px-3 py-1 border border-gray-300 rounded-md text-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-
                 {/* Action Buttons */}
                 <div className="border-t pt-6">
                   <div className="flex space-x-3">
@@ -321,23 +247,6 @@ export default function SendCampaignModal({ campaign, onClose, onSent }: SendCam
                     >
                       <Mail className="h-4 w-4 mr-2" />
                       Test
-                    </button>
-                    <button
-                      onClick={handleSchedule}
-                      disabled={isLoading || validationErrors.length > 0 || !sendDate || !sendTime}
-                      className="btn btn-primary disabled:opacity-50 flex items-center"
-                    >
-                      {isLoading ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Scheduling...
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="h-4 w-4 mr-2" />
-                          Schedule
-                        </>
-                      )}
                     </button>
                     <button
                       onClick={handleSendNow}
