@@ -128,7 +128,7 @@ export async function sendCampaign(campaignId: string, selectedContactIds?: stri
     const emailPromises = targetContacts.map(async (contact: Contact) => {
       try {
         await resend.emails.send({
-          from: 'EmailCraft Pro <noreply@emailcraft.pro>',
+          from: 'Cosmic Support <support@cosmicjs.com>',
           to: contact.metadata.email,
           subject: template.metadata.subject_line,
           html: template.metadata.html_content,
@@ -297,7 +297,7 @@ export async function sendTestEmail(
 
     // Send test email
     await resend.emails.send({
-      from: 'EmailCraft Pro <noreply@emailcraft.pro>',
+      from: 'Cosmic Support <support@cosmicjs.com>',
       to: testEmail,
       subject: `[TEST] ${template.metadata.subject_line}`,
       html: template.metadata.html_content,
