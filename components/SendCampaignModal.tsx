@@ -89,8 +89,9 @@ export default function SendCampaignModal({ campaign, onClose, onSent }: SendCam
     }
     
     // If no specific contacts selected, estimate based on target tags
-    if (campaign.metadata.target_tags && campaign.metadata.target_tags.length > 0) {
-      return `Contacts with tags: ${campaign.metadata.target_tags.join(', ')}`
+    const targetTags = campaign.metadata.target_tags ?? undefined
+    if (targetTags && targetTags.length > 0) {
+      return `Contacts with tags: ${targetTags.join(', ')}`
     }
     
     return 'All subscribed contacts'
@@ -278,7 +279,7 @@ export default function SendCampaignModal({ campaign, onClose, onSent }: SendCam
           onClose={() => setShowContactSelector(false)}
           onSelect={setSelectedContacts}
           selectedContacts={selectedContacts}
-          targetTags={campaign.metadata.target_tags}
+          targetTags={campaign.metadata.target_tags ?? undefined}
         />
       )}
 
