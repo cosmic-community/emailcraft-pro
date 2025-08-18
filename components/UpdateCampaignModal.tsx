@@ -78,30 +78,43 @@ export default function UpdateCampaignModal({ campaign, onClose, onUpdated }: Up
 
     setIsLoading(true)
     try {
-      const selectedTemplate = templates.find(t => t.id === selectedTemplateId)
+      // Only include metadata that has changed
+      const metadata: any = {}
       
-      const updateData = {
-        title: campaignName,
-        metadata: {
-          campaign_name: campaignName,
-          email_template: selectedTemplate ? {
-            id: selectedTemplate.id,
-            slug: selectedTemplate.slug,
-            title: selectedTemplate.title
-          } : null,
-          campaign_status: campaignStatus, // Use the CampaignStatusValue directly
-          target_tags: targetTags.length > 0 ? targetTags : null,
-          send_date: sendDate || null,
-          campaign_notes: campaignNotes || null,
-          campaign_stats: campaign.metadata.campaign_stats || {
-            recipients: 0,
-            delivered: 0,
-            opened: 0,
-            clicked: 0,
-            open_rate: 0,
-            click_rate: 0
-          }
-        }
+      if (campaignName !== campaign.metadata.campaign_name) {
+        metadata.campaign_name = campaignName
+      }
+      
+      if (selectedTemplateId && selectedTemplateId !== campaign.metadata.email_template?.id) {
+        metadata.email_template = selectedTemplateId // Use just the ID
+      }
+      
+      if (campaignStatus !== getStatusValue(campaign.metadata.campaign_status)) {
+        metadata.campaign_status = campaignStatus
+      }
+      
+      // Compare arrays properly for target_tags
+      const currentTags = campaign.metadata.target_tags || []
+      if (JSON.stringify(targetTags.sort()) !== JSON.stringify(currentTags.sort())) {
+        metadata.target_tags = targetTags.length > 0 ? targetTags : null
+      }
+      
+      if (sendDate !== campaign.metadata.send_date) {
+        metadata.send_date = sendDate || null
+      }
+      
+      if (campaignNotes !== campaign.metadata.campaign_notes) {
+        metadata.campaign_notes = campaignNotes || null
+      }
+
+      const updateData: any = {}
+      
+      if (campaignName !== campaign.title) {
+        updateData.title = campaignName
+      }
+      
+      if (Object.keys(metadata).length > 0) {
+        updateData.metadata = metadata
       }
 
       const response = await fetch(`/api/campaigns/${campaign.id}`, {

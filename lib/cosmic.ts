@@ -67,93 +67,35 @@ export async function getCampaign(id: string): Promise<Campaign | null> {
 }
 
 export async function createCampaign(data: CreateCampaignFormData & { title?: string }): Promise<Campaign> {
-  // Prepare metafields array with proper structure matching the Cosmic object type definition
-  const metafields = [
-    {
-      title: "Campaign Name",
-      key: "campaign_name",
-      type: "text",
-      required: true,
-      id: "90055cd9-a284-4001-a727-38d0311e6b8f",
-      value: data.campaign_name
-    },
-    {
-      title: "Email Template",
-      key: "email_template", 
-      type: "object",
-      object_type: "email-templates",
-      required: true,
-      id: "5e343fc0-cb80-4f3e-b35d-799c278b2cfe",
-      value: data.email_template // This should be the template ID
-    },
-    {
-      title: "Campaign Status",
-      key: "campaign_status",
-      type: "select-dropdown", 
-      required: true,
-      options: [
-        { key: "draft", value: "Draft" },
-        { key: "scheduled", value: "Scheduled" },
-        { key: "sending", value: "Sending" },
-        { key: "sent", value: "Sent" },
-        { key: "paused", value: "Paused" }
-      ],
-      id: "e7f6c3b6-2c9b-4393-937e-15e6101cc032",
-      value: { key: "draft", value: "Draft" }
-    },
-    {
-      title: "Target Tags",
-      key: "target_tags",
-      type: "check-boxes",
-      required: false,
-      options: [
-        { value: "Newsletter" },
-        { value: "Promotions" },
-        { value: "VIP Customer" },
-        { value: "New Subscriber" },
-        { value: "Technology" },
-        { value: "Marketing" }
-      ],
-      id: "778a76bb-8b11-45f1-a694-87987c1cb25b",
-      value: data.target_tags || []
-    },
-    {
-      title: "Send Date",
-      key: "send_date",
-      type: "date",
-      required: false,
-      id: "99168874-31b5-4bcb-8c39-90b9a0161f25", 
-      value: data.send_date || ""
-    },
-    {
-      title: "Campaign Notes",
-      key: "campaign_notes",
-      type: "textarea",
-      required: false,
-      id: "8b2e52e5-17b8-4f76-89ad-1b53525341f0",
-      value: data.campaign_notes || ""
-    },
-    {
-      title: "Campaign Stats",
-      key: "campaign_stats",
-      type: "json",
-      required: false,
-      id: "3b3e7473-1bfe-4344-9b00-ff3db6b630c7",
-      value: {
-        recipients: 0,
-        delivered: 0,
-        opened: 0,
-        clicked: 0,
-        open_rate: 0,
-        click_rate: 0
-      }
+  // Build metadata object with only the values, not the full metafield structure
+  const metadata: any = {
+    campaign_name: data.campaign_name,
+    email_template: data.email_template, // This should be just the template ID string
+    campaign_status: data.campaign_status || 'Draft',
+    target_tags: data.target_tags && data.target_tags.length > 0 ? data.target_tags : null,
+    send_date: data.send_date || null,
+    campaign_notes: data.campaign_notes || null,
+    campaign_stats: {
+      recipients: 0,
+      delivered: 0,
+      opened: 0,
+      clicked: 0,
+      open_rate: 0,
+      click_rate: 0
     }
-  ]
+  }
+
+  // Remove any null/undefined values to avoid validation issues
+  Object.keys(metadata).forEach(key => {
+    if (metadata[key] === null || metadata[key] === undefined || metadata[key] === '') {
+      delete metadata[key]
+    }
+  })
 
   const { object } = await cosmicWrite.objects.insertOne({
     title: data.title || data.campaign_name,
     type: 'campaigns',
-    metafields: metafields
+    metadata: metadata
   })
 
   return object
