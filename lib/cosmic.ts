@@ -1,187 +1,324 @@
 import { createBucketClient } from '@cosmicjs/sdk'
-import { Contact, EmailTemplate, Campaign, CreateContactFormData, CreateTemplateFormData, CreateCampaignFormData } from '@/types'
+import { Contact, Campaign, Template } from '@/types'
 
+// Initialize Cosmic client
 const cosmic = createBucketClient({
   bucketSlug: process.env.COSMIC_BUCKET_SLUG as string,
   readKey: process.env.COSMIC_READ_KEY as string,
-  writeKey: process.env.COSMIC_WRITE_KEY as string,
-  apiEnvironment: "staging"
-})
-
-const cosmicRead = createBucketClient({
-  bucketSlug: process.env.COSMIC_BUCKET_SLUG as string,
-  readKey: process.env.COSMIC_READ_KEY as string,
-  apiEnvironment: "staging"
+  writeKey: process.env.COSMIC_WRITE_KEY as string
 })
 
 // Contact functions
 export async function getContacts(): Promise<Contact[]> {
   try {
-    const { objects } = await cosmicRead.objects
-      .find({ type: 'contacts' })
-      .props(['id', 'title', 'slug', 'metadata'])
+    const { objects } = await cosmic.objects.find({ type: 'contacts' })
+      .props(['id', 'title', 'slug', 'metadata', 'created_at'])
       .depth(1)
-
-    return objects as Contact[]
-  } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-      return []
-    }
+    
+    return objects.map((obj: any) => ({
+      id: obj.id,
+      title: obj.title,
+      slug: obj.slug,
+      email: obj.metadata?.email || '',
+      first_name: obj.metadata?.first_name || '',
+      last_name: obj.metadata?.last_name || '',
+      subscription_status: obj.metadata?.subscription_status || 'subscribed',
+      date_subscribed: obj.metadata?.date_subscribed || '',
+      tags: obj.metadata?.tags || [],
+      notes: obj.metadata?.notes || '',
+      created_at: obj.created_at
+    }))
+  } catch (error) {
+    console.error('Error fetching contacts:', error)
     throw error
   }
 }
 
-export async function createContact(data: CreateContactFormData): Promise<Contact> {
-  const contactData = {
-    title: data.title,
-    type: 'contacts',
-    metadata: {
-      email: data.email,
-      first_name: data.first_name || '',
-      last_name: data.last_name || '',
-      subscription_status: data.subscription_status,
-      tags: data.tags || null,
-      date_subscribed: data.date_subscribed || '',
-      notes: data.notes || ''
-    }
-  }
-
-  const { object } = await cosmic.objects.insertOne(contactData)
-  return object as Contact
-}
-
-// Template functions
-export async function getTemplates(): Promise<EmailTemplate[]> {
+export async function createContact(contactData: Partial<Contact>): Promise<Contact> {
   try {
-    const { objects } = await cosmicRead.objects
-      .find({ type: 'email-templates' })
-      .props(['id', 'title', 'slug', 'metadata'])
-      .depth(1)
+    // Generate a title for the contact object
+    const contactName = contactData.first_name || contactData.last_name 
+      ? `${contactData.first_name || ''} ${contactData.last_name || ''}`.trim()
+      : contactData.email?.split('@')[0] || 'Contact'
+    
+    const title = `${contactName} (${contactData.email})`
+    
+    const { object } = await cosmic.objects.insertOne({
+      title,
+      type: 'contacts',
+      status: 'published',
+      metadata: {
+        email: contactData.email || '',
+        first_name: contactData.first_name || '',
+        last_name: contactData.last_name || '',
+        subscription_status: contactData.subscription_status || 'subscribed',
+        date_subscribed: contactData.date_subscribed || new Date().toISOString().split('T')[0],
+        tags: contactData.tags || [],
+        notes: contactData.notes || ''
+      }
+    })
 
-    return objects as EmailTemplate[]
-  } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-      return []
+    return {
+      id: object.id,
+      title: object.title,
+      slug: object.slug,
+      email: object.metadata.email,
+      first_name: object.metadata.first_name,
+      last_name: object.metadata.last_name,
+      subscription_status: object.metadata.subscription_status,
+      date_subscribed: object.metadata.date_subscribed,
+      tags: object.metadata.tags,
+      notes: object.metadata.notes,
+      created_at: object.created_at
     }
+  } catch (error) {
+    console.error('Error creating contact:', error)
     throw error
   }
 }
 
-// Add missing export alias for getEmailTemplates
-export const getEmailTemplates = getTemplates
-
-export async function createTemplate(data: CreateTemplateFormData): Promise<EmailTemplate> {
-  const templateData = {
-    title: data.title,
-    type: 'email-templates',
-    metadata: {
-      template_name: data.template_name,
-      subject_line: data.subject_line,
-      html_content: data.html_content,
-      template_category: data.template_category || '',
-      template_description: data.template_description || ''
+export async function updateContact(id: string, contactData: Partial<Contact>): Promise<Contact> {
+  try {
+    // Generate a title for the contact object if name or email changed
+    let updateData: any = {
+      metadata: {
+        email: contactData.email,
+        first_name: contactData.first_name,
+        last_name: contactData.last_name,
+        subscription_status: contactData.subscription_status,
+        date_subscribed: contactData.date_subscribed,
+        tags: contactData.tags,
+        notes: contactData.notes
+      }
     }
-  }
 
-  const { object } = await cosmic.objects.insertOne(templateData)
-  return object as EmailTemplate
+    // Update title if name or email fields are being updated
+    if (contactData.first_name !== undefined || contactData.last_name !== undefined || contactData.email !== undefined) {
+      const contactName = contactData.first_name || contactData.last_name 
+        ? `${contactData.first_name || ''} ${contactData.last_name || ''}`.trim()
+        : contactData.email?.split('@')[0] || 'Contact'
+      
+      updateData.title = `${contactName} (${contactData.email})`
+    }
+
+    const { object } = await cosmic.objects.updateOne(id, updateData)
+
+    return {
+      id: object.id,
+      title: object.title,
+      slug: object.slug,
+      email: object.metadata.email,
+      first_name: object.metadata.first_name,
+      last_name: object.metadata.last_name,
+      subscription_status: object.metadata.subscription_status,
+      date_subscribed: object.metadata.date_subscribed,
+      tags: object.metadata.tags,
+      notes: object.metadata.notes,
+      created_at: object.created_at
+    }
+  } catch (error) {
+    console.error('Error updating contact:', error)
+    throw error
+  }
+}
+
+export async function deleteContact(id: string): Promise<void> {
+  try {
+    await cosmic.objects.deleteOne(id)
+  } catch (error) {
+    console.error('Error deleting contact:', error)
+    throw error
+  }
 }
 
 // Campaign functions
 export async function getCampaigns(): Promise<Campaign[]> {
   try {
-    const { objects } = await cosmicRead.objects
-      .find({ type: 'campaigns' })
-      .props(['id', 'title', 'slug', 'metadata'])
+    const { objects } = await cosmic.objects.find({ type: 'campaigns' })
+      .props(['id', 'title', 'slug', 'metadata', 'created_at'])
       .depth(1)
-
-    return objects as Campaign[]
-  } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-      return []
-    }
+    
+    return objects.map((obj: any) => ({
+      id: obj.id,
+      title: obj.title,
+      slug: obj.slug,
+      subject: obj.metadata?.subject || '',
+      content: obj.metadata?.content || '',
+      status: obj.metadata?.status || 'draft',
+      scheduled_at: obj.metadata?.scheduled_at || null,
+      sent_at: obj.metadata?.sent_at || null,
+      recipient_count: obj.metadata?.recipient_count || 0,
+      open_rate: obj.metadata?.open_rate || 0,
+      click_rate: obj.metadata?.click_rate || 0,
+      template_id: obj.metadata?.template_id || null,
+      created_at: obj.created_at
+    }))
+  } catch (error) {
+    console.error('Error fetching campaigns:', error)
     throw error
   }
 }
 
-export async function getCampaignById(id: string): Promise<Campaign | null> {
+export async function createCampaign(campaignData: Partial<Campaign>): Promise<Campaign> {
   try {
-    const { object } = await cosmicRead.objects
-      .findOne({ type: 'campaigns', id })
-      .props(['id', 'title', 'slug', 'metadata'])
-      .depth(1)
+    const { object } = await cosmic.objects.insertOne({
+      title: campaignData.title || 'New Campaign',
+      type: 'campaigns',
+      status: 'published',
+      metadata: {
+        subject: campaignData.subject || '',
+        content: campaignData.content || '',
+        status: campaignData.status || 'draft',
+        scheduled_at: campaignData.scheduled_at || null,
+        sent_at: campaignData.sent_at || null,
+        recipient_count: campaignData.recipient_count || 0,
+        open_rate: campaignData.open_rate || 0,
+        click_rate: campaignData.click_rate || 0,
+        template_id: campaignData.template_id || null
+      }
+    })
 
-    return object as Campaign
-  } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-      return null
+    return {
+      id: object.id,
+      title: object.title,
+      slug: object.slug,
+      subject: object.metadata.subject,
+      content: object.metadata.content,
+      status: object.metadata.status,
+      scheduled_at: object.metadata.scheduled_at,
+      sent_at: object.metadata.sent_at,
+      recipient_count: object.metadata.recipient_count,
+      open_rate: object.metadata.open_rate,
+      click_rate: object.metadata.click_rate,
+      template_id: object.metadata.template_id,
+      created_at: object.created_at
     }
+  } catch (error) {
+    console.error('Error creating campaign:', error)
     throw error
   }
 }
 
-export async function createCampaign(data: CreateCampaignFormData): Promise<Campaign> {
-  const campaignData = {
-    title: data.title,
-    type: 'campaigns',
-    metadata: {
-      campaign_name: data.campaign_name,
-      email_template: data.email_template,
-      campaign_status: data.campaign_status,
-      target_tags: data.target_tags && data.target_tags.length > 0 ? data.target_tags : null,
-      send_date: data.send_date || null,
-      campaign_notes: data.campaign_notes || null,
-      campaign_stats: {
-        recipients: 0,
-        delivered: 0,
-        opened: 0,
-        clicked: 0,
-        open_rate: 0,
-        click_rate: 0
+export async function updateCampaign(id: string, campaignData: Partial<Campaign>): Promise<Campaign> {
+  try {
+    const updateData: any = {
+      metadata: {
+        subject: campaignData.subject,
+        content: campaignData.content,
+        status: campaignData.status,
+        scheduled_at: campaignData.scheduled_at,
+        sent_at: campaignData.sent_at,
+        recipient_count: campaignData.recipient_count,
+        open_rate: campaignData.open_rate,
+        click_rate: campaignData.click_rate,
+        template_id: campaignData.template_id
       }
     }
+
+    if (campaignData.title) {
+      updateData.title = campaignData.title
+    }
+
+    const { object } = await cosmic.objects.updateOne(id, updateData)
+
+    return {
+      id: object.id,
+      title: object.title,
+      slug: object.slug,
+      subject: object.metadata.subject,
+      content: object.metadata.content,
+      status: object.metadata.status,
+      scheduled_at: object.metadata.scheduled_at,
+      sent_at: object.metadata.sent_at,
+      recipient_count: object.metadata.recipient_count,
+      open_rate: object.metadata.open_rate,
+      click_rate: object.metadata.click_rate,
+      template_id: object.metadata.template_id,
+      created_at: object.created_at
+    }
+  } catch (error) {
+    console.error('Error updating campaign:', error)
+    throw error
   }
-
-  const { object } = await cosmic.objects.insertOne(campaignData)
-  return object as Campaign
 }
 
-export async function updateCampaign(id: string, data: any): Promise<Campaign> {
-  const { object } = await cosmic.objects.updateOne(id, data)
-  return object as Campaign
-}
-
-// Statistics functions
-export async function getDashboardStats() {
+// Template functions
+export async function getTemplates(): Promise<Template[]> {
   try {
-    const [contactsResponse, templatesResponse, campaignsResponse] = await Promise.all([
-      cosmicRead.objects.find({ type: 'contacts' }).props(['id']),
-      cosmicRead.objects.find({ type: 'email-templates' }).props(['id']),
-      cosmicRead.objects.find({ type: 'campaigns' }).props(['id', 'metadata'])
-    ])
-
-    const totalContacts = contactsResponse.objects?.length || 0
-    const totalTemplates = templatesResponse.objects?.length || 0
-    const totalCampaigns = campaignsResponse.objects?.length || 0
+    const { objects } = await cosmic.objects.find({ type: 'templates' })
+      .props(['id', 'title', 'slug', 'metadata', 'created_at'])
+      .depth(1)
     
-    // Calculate sent campaigns
-    const sentCampaigns = campaignsResponse.objects?.filter(
-      (campaign: any) => campaign.metadata?.campaign_status?.value === 'Sent' || campaign.metadata?.campaign_status === 'sent'
-    ).length || 0
+    return objects.map((obj: any) => ({
+      id: obj.id,
+      title: obj.title,
+      slug: obj.slug,
+      name: obj.metadata?.name || obj.title,
+      subject: obj.metadata?.subject || '',
+      content: obj.metadata?.content || '',
+      thumbnail: obj.metadata?.thumbnail || null,
+      category: obj.metadata?.category || 'general',
+      created_at: obj.created_at
+    }))
+  } catch (error) {
+    console.error('Error fetching templates:', error)
+    throw error
+  }
+}
+
+export async function createTemplate(templateData: Partial<Template>): Promise<Template> {
+  try {
+    const { object } = await cosmic.objects.insertOne({
+      title: templateData.title || templateData.name || 'New Template',
+      type: 'templates',
+      status: 'published',
+      metadata: {
+        name: templateData.name || templateData.title || 'New Template',
+        subject: templateData.subject || '',
+        content: templateData.content || '',
+        thumbnail: templateData.thumbnail || null,
+        category: templateData.category || 'general'
+      }
+    })
 
     return {
-      totalContacts,
-      totalTemplates,
-      totalCampaigns,
-      sentCampaigns
+      id: object.id,
+      title: object.title,
+      slug: object.slug,
+      name: object.metadata.name,
+      subject: object.metadata.subject,
+      content: object.metadata.content,
+      thumbnail: object.metadata.thumbnail,
+      category: object.metadata.category,
+      created_at: object.created_at
     }
-  } catch (error: unknown) {
-    console.error('Error fetching dashboard stats:', error)
+  } catch (error) {
+    console.error('Error creating template:', error)
+    throw error
+  }
+}
+
+export async function getTemplate(id: string): Promise<Template | null> {
+  try {
+    const { object } = await cosmic.objects.findOne({ id })
+      .props(['id', 'title', 'slug', 'metadata', 'created_at'])
+      .depth(1)
+
+    if (!object) return null
+
     return {
-      totalContacts: 0,
-      totalTemplates: 0,
-      totalCampaigns: 0,
-      sentCampaigns: 0
+      id: object.id,
+      title: object.title,
+      slug: object.slug,
+      name: object.metadata?.name || object.title,
+      subject: object.metadata?.subject || '',
+      content: object.metadata?.content || '',
+      thumbnail: object.metadata?.thumbnail || null,
+      category: object.metadata?.category || 'general',
+      created_at: object.created_at
     }
+  } catch (error) {
+    console.error('Error fetching template:', error)
+    return null
   }
 }
