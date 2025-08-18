@@ -4,13 +4,16 @@ export interface CosmicObject {
   slug: string;
   title: string;
   content?: string;
-  metadata: Record<string, any>;
-  type: string;
+  bucket: string;
   created_at: string;
   modified_at: string;
+  status: string;
+  published_at?: string;
+  type: string;
+  metadata: Record<string, any>;
 }
 
-// Contact object type
+// Contact object type based on actual Cosmic CMS structure
 export interface Contact extends CosmicObject {
   type: 'contacts';
   metadata: {
@@ -21,13 +24,13 @@ export interface Contact extends CosmicObject {
       key: SubscriptionStatus;
       value: string;
     };
-    tags?: string[];
+    tags?: string[] | null;
     date_subscribed?: string;
-    notes?: string;
+    notes?: string | null;
   };
 }
 
-// Email Template object type
+// Email Template object type based on actual Cosmic CMS structure
 export interface EmailTemplate extends CosmicObject {
   type: 'email-templates';
   metadata: {
@@ -35,27 +38,30 @@ export interface EmailTemplate extends CosmicObject {
     subject_line: string;
     html_content: string;
     template_category?: {
-      key: TemplateCategory;
+      key: string;
       value: string;
     };
     preview_image?: {
       url: string;
       imgix_url: string;
-    };
-    template_description?: string;
+    } | null;
+    template_description?: string | null;
   };
 }
 
-// Campaign object type
+// Campaign object type based on actual Cosmic CMS structure
 export interface Campaign extends CosmicObject {
   type: 'campaigns';
   metadata: {
     campaign_name: string;
     email_template: EmailTemplate;
-    campaign_status: any;
-    target_tags?: string[];
+    campaign_status: {
+      key: CampaignStatus;
+      value: string;
+    };
+    target_tags?: string[] | null;
     send_date?: string;
-    campaign_notes?: string;
+    campaign_notes?: string | null;
     campaign_stats?: {
       recipients: number;
       delivered: number;
@@ -64,6 +70,25 @@ export interface Campaign extends CosmicObject {
       open_rate: number;
       click_rate: number;
     };
+  };
+}
+
+// Template type for compatibility
+export interface Template extends CosmicObject {
+  type: 'email-templates';
+  metadata: {
+    template_name: string;
+    subject_line: string;
+    html_content: string;
+    template_category?: {
+      key: string;
+      value: string;
+    };
+    preview_image?: {
+      url: string;
+      imgix_url: string;
+    } | null;
+    template_description?: string | null;
   };
 }
 

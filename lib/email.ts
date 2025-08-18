@@ -143,9 +143,9 @@ export async function scheduleCampaign(
       }
     }
 
-    // Update campaign status to scheduled - construct proper update data
+    // Update campaign status to scheduled
     const updateData = {
-      campaign_status: 'scheduled' as const,
+      campaign_status: 'scheduled',
       send_date: scheduledDate.toISOString().split('T')[0],
       campaign_name: campaign.metadata.campaign_name,
       email_template: campaign.metadata.email_template.id,
@@ -340,18 +340,8 @@ async function updateCampaignAfterSending(
   sendResults: SendResult,
   totalRecipients: number
 ): Promise<void> {
-  const stats = {
-    recipients: totalRecipients,
-    delivered: sendResults.successfulSends,
-    opened: 0,
-    clicked: 0,
-    open_rate: 0,
-    click_rate: 0
-  }
-
-  // Construct proper update data that matches CreateCampaignFormData structure
   const updateData = {
-    campaign_status: 'sent' as const,
+    campaign_status: 'sent',
     campaign_name: campaign.metadata.campaign_name,
     email_template: campaign.metadata.email_template.id,
     target_tags: campaign.metadata.target_tags || [],
