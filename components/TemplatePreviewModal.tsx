@@ -28,7 +28,6 @@ export default function TemplatePreviewModal({ template, onClose, onUseTemplate 
               onClick={onUseTemplate}
               className="btn btn-primary"
             >
-              <Copy className="h-4 w-4 mr-2" />
               Use Template
             </button>
             <button
