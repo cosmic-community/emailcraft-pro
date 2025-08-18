@@ -96,6 +96,9 @@ export interface Template extends CosmicObject {
 export type SubscriptionStatusKey = 'subscribed' | 'unsubscribed' | 'pending';
 export type SubscriptionStatusValue = 'Subscribed' | 'Unsubscribed' | 'Pending Confirmation';
 
+// Add SubscriptionStatus as an alias for backward compatibility
+export type SubscriptionStatus = SubscriptionStatusKey;
+
 export type TemplateCategoryKey = 'newsletter' | 'promotion' | 'welcome' | 'transactional' | 'announcement';
 export type TemplateCategoryValue = 'Newsletter' | 'Promotional' | 'Welcome Series' | 'Transactional' | 'Announcement';
 

@@ -16,6 +16,30 @@ function getStatusColor(status: string): string {
   }
 }
 
+function getStatusValue(campaign: Campaign): string {
+  // Handle both string and object formats for backward compatibility
+  if (typeof campaign.metadata.campaign_status === 'string') {
+    return campaign.metadata.campaign_status || 'Draft'
+  }
+  return campaign.metadata.campaign_status?.value || 'Draft'
+}
+
+function getStatusKey(campaign: Campaign): string {
+  // Handle both string and object formats for backward compatibility
+  if (typeof campaign.metadata.campaign_status === 'string') {
+    // Convert value back to key
+    const statusMap: Record<string, string> = {
+      'Draft': 'draft',
+      'Scheduled': 'scheduled',
+      'Sending': 'sending',
+      'Sent': 'sent',
+      'Paused': 'paused'
+    }
+    return statusMap[campaign.metadata.campaign_status] || 'draft'
+  }
+  return campaign.metadata.campaign_status?.key || 'draft'
+}
+
 export default function RecentCampaigns({ campaigns }: RecentCampaignsProps) {
   if (campaigns.length === 0) {
     return (
@@ -61,8 +85,8 @@ export default function RecentCampaigns({ campaigns }: RecentCampaignsProps) {
                 </div>
               </div>
               
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(campaign.metadata.campaign_status.key)}`}>
-                {campaign.metadata.campaign_status.value}
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(getStatusKey(campaign))}`}>
+                {getStatusValue(campaign)}
               </span>
             </div>
           </div>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
-import { SubscriptionStatus } from '@/types'
+import { SubscriptionStatusKey } from '@/types'
 
 const AVAILABLE_TAGS = [
   'Newsletter',
@@ -20,7 +20,7 @@ export default function AddContactForm() {
     email: '',
     first_name: '',
     last_name: '',
-    subscription_status: 'subscribed' as SubscriptionStatus,
+    subscription_status: 'subscribed' as SubscriptionStatusKey,
     tags: [] as string[],
     notes: ''
   })
@@ -51,7 +51,7 @@ export default function AddContactForm() {
         email: '',
         first_name: '',
         last_name: '',
-        subscription_status: 'subscribed' as SubscriptionStatus,
+        subscription_status: 'subscribed' as SubscriptionStatusKey,
         tags: [],
         notes: ''
       })
@@ -149,7 +149,7 @@ export default function AddContactForm() {
               value={formData.subscription_status}
               onChange={(e) => setFormData(prev => ({ 
                 ...prev, 
-                subscription_status: e.target.value as SubscriptionStatus
+                subscription_status: e.target.value as SubscriptionStatusKey
               }))}
               className="input"
             >

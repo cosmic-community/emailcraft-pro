@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCampaign } from '@/lib/cosmic'
+import { createBucketClient } from '@cosmicjs/sdk'
 import { sendTestEmail } from '@/lib/email'
+
+const cosmic = createBucketClient({
+  bucketSlug: process.env.COSMIC_BUCKET_SLUG as string,
+  readKey: process.env.COSMIC_READ_KEY as string,
+  writeKey: process.env.COSMIC_WRITE_KEY as string,
+  apiEnvironment: "staging"
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +48,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Get campaign details
-    const campaign = await getCampaign(campaignId)
+    const { object: campaign } = await cosmic.objects.findOne({
+      type: 'campaigns',
+      id: campaignId
+    }).depth(1)
     
     if (!campaign) {
       return NextResponse.json(
@@ -50,7 +60,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send test email
+    // Send test email using the campaign object directly
     const result = await sendTestEmail(campaign, testEmail)
 
     if (!result.success) {

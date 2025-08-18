@@ -31,6 +31,18 @@ function getStatusValue(campaign: Campaign): string {
 }
 
 function getStatusKey(campaign: Campaign): string {
+  // Handle both string and object formats for backward compatibility
+  if (typeof campaign.metadata.campaign_status === 'string') {
+    // Convert value back to key
+    const statusMap: Record<string, string> = {
+      'Draft': 'draft',
+      'Scheduled': 'scheduled',
+      'Sending': 'sending',
+      'Sent': 'sent',
+      'Paused': 'paused'
+    }
+    return statusMap[campaign.metadata.campaign_status] || 'draft'
+  }
   return campaign.metadata.campaign_status?.key || 'draft'
 }
 
