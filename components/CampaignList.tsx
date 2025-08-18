@@ -95,6 +95,7 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {campaigns.map((campaign) => {
           const statusValue = getStatusValue(campaign)
+          const statusColor = getStatusColor(statusValue)
           
           return (
             <div 
@@ -113,7 +114,7 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(statusValue)}`}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>
                     {statusValue}
                   </span>
                   
