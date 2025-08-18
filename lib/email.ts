@@ -1,5 +1,5 @@
 import { Resend } from 'resend'
-import { getCampaignById, getContacts, updateCampaign } from './cosmic'
+import { getCampaign, getContacts, updateCampaign } from './cosmic'
 import { Campaign, Contact } from '@/types'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -44,7 +44,7 @@ export async function sendCampaign(
 ): Promise<SendResult> {
   try {
     // Get campaign details
-    const campaign = await getCampaignById(campaignId)
+    const campaign = await getCampaign(campaignId)
     if (!campaign) {
       return {
         success: false,
@@ -107,7 +107,7 @@ export async function scheduleCampaign(
 ): Promise<SendResult> {
   try {
     // Get campaign details
-    const campaign = await getCampaignById(campaignId)
+    const campaign = await getCampaign(campaignId)
     if (!campaign) {
       return {
         success: false,
@@ -145,7 +145,7 @@ export async function scheduleCampaign(
 
     // Update campaign status to scheduled
     const updateData = {
-      campaign_status: 'scheduled',
+      campaign_status: 'scheduled' as const,
       send_date: scheduledDate.toISOString().split('T')[0],
       campaign_name: campaign.metadata.campaign_name,
       email_template: campaign.metadata.email_template.id,
@@ -341,7 +341,7 @@ async function updateCampaignAfterSending(
   totalRecipients: number
 ): Promise<void> {
   const updateData = {
-    campaign_status: 'sent',
+    campaign_status: 'sent' as const,
     campaign_name: campaign.metadata.campaign_name,
     email_template: campaign.metadata.email_template.id,
     target_tags: campaign.metadata.target_tags || [],

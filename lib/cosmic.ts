@@ -3,10 +3,9 @@ import {
   Campaign, 
   EmailTemplate, 
   Contact, 
-  CreateCampaignData,
-  CreateTemplateData,
-  CreateContactData,
-  CampaignStats 
+  CreateCampaignFormData,
+  CreateTemplateFormData,
+  CreateContactFormData
 } from '@/types'
 
 // Initialize Cosmic client for read operations (client-side safe)
@@ -21,6 +20,16 @@ const cosmicWrite = createBucketClient({
   readKey: process.env.COSMIC_READ_KEY as string,
   writeKey: process.env.COSMIC_WRITE_KEY as string
 })
+
+// Campaign stats type
+export interface CampaignStats {
+  recipients: number;
+  delivered: number;
+  opened: number;
+  clicked: number;
+  open_rate: number;
+  click_rate: number;
+}
 
 // Campaigns
 export async function getCampaigns(): Promise<Campaign[]> {
@@ -55,7 +64,7 @@ export async function getCampaign(id: string): Promise<Campaign | null> {
   }
 }
 
-export async function createCampaign(data: CreateCampaignData): Promise<Campaign> {
+export async function createCampaign(data: CreateCampaignFormData): Promise<Campaign> {
   const { object } = await cosmicWrite.objects.insertOne({
     title: data.campaign_name,
     type: 'campaigns',
@@ -80,7 +89,7 @@ export async function createCampaign(data: CreateCampaignData): Promise<Campaign
   return object
 }
 
-export async function updateCampaign(id: string, data: Partial<CreateCampaignData>): Promise<Campaign> {
+export async function updateCampaign(id: string, data: Partial<CreateCampaignFormData>): Promise<Campaign> {
   const updateData: any = {}
 
   if (data.campaign_name) {
@@ -152,7 +161,7 @@ export async function getTemplate(id: string): Promise<EmailTemplate | null> {
   }
 }
 
-export async function createTemplate(data: CreateTemplateData): Promise<EmailTemplate> {
+export async function createTemplate(data: CreateTemplateFormData): Promise<EmailTemplate> {
   const { object } = await cosmicWrite.objects.insertOne({
     title: data.template_name,
     type: 'email-templates',
@@ -161,7 +170,7 @@ export async function createTemplate(data: CreateTemplateData): Promise<EmailTem
       subject_line: data.subject_line,
       html_content: data.html_content,
       template_category: data.template_category ? { key: '', value: data.template_category } : { key: '', value: '' },
-      preview_image: data.preview_image || null,
+      preview_image: null,
       template_description: data.template_description || ''
     }
   })
@@ -185,7 +194,7 @@ export async function getContacts(): Promise<Contact[]> {
   }
 }
 
-export async function createContact(data: CreateContactData): Promise<Contact> {
+export async function createContact(data: CreateContactFormData): Promise<Contact> {
   const { object } = await cosmicWrite.objects.insertOne({
     title: data.email, // Set title to email address as required by Cosmic
     type: 'contacts',

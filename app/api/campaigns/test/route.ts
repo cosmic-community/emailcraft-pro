@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCampaignById } from '@/lib/cosmic'
+import { getCampaign } from '@/lib/cosmic'
 import { sendTestEmail } from '@/lib/email'
 
 export async function POST(request: NextRequest) {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get campaign details
-    const campaign = await getCampaignById(campaignId)
+    const campaign = await getCampaign(campaignId)
     
     if (!campaign) {
       return NextResponse.json(
