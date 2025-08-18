@@ -1,10 +1,14 @@
-import { Resend } from 'resend'
-import { getCampaign, getContacts, updateCampaign } from './cosmic'
-import { Campaign, Contact } from '@/types'
+import { createBucketClient } from '@cosmicjs/sdk'
+import { resend } from './resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const cosmic = createBucketClient({
+  bucketSlug: process.env.COSMIC_BUCKET_SLUG as string,
+  readKey: process.env.COSMIC_READ_KEY as string,
+  writeKey: process.env.COSMIC_WRITE_KEY as string,
+  apiEnvironment: "staging"
+})
 
-export interface SendResult {
+interface SendResult {
   success: boolean
   totalRecipients: number
   successfulSends: number
@@ -12,39 +16,14 @@ export interface SendResult {
   errors: string[]
 }
 
-export interface ValidationResult {
-  isValid: boolean
-  errors: string[]
-}
-
-export function validateCampaignForSending(campaign: Campaign): ValidationResult {
-  const errors: string[] = []
-
-  if (!campaign.metadata.email_template) {
-    errors.push('No email template selected')
-  }
-
-  if (!campaign.metadata.email_template?.metadata?.html_content) {
-    errors.push('Email template has no content')
-  }
-
-  if (!campaign.metadata.email_template?.metadata?.subject_line) {
-    errors.push('Email template has no subject line')
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors
-  }
-}
-
-export async function sendCampaign(
-  campaignId: string, 
-  selectedContactIds?: string[]
-): Promise<SendResult> {
+export async function sendCampaign(campaignId: string, selectedContactIds?: string[]): Promise<SendResult> {
   try {
-    // Get campaign details
-    const campaign = await getCampaign(campaignId)
+    // 1. Get campaign with template data
+    const { object: campaign } = await cosmic.objects.findOne({
+      type: 'campaigns',
+      id: campaignId
+    }).depth(1)
+
     if (!campaign) {
       return {
         success: false,
@@ -55,116 +34,157 @@ export async function sendCampaign(
       }
     }
 
-    // Validate campaign
-    const validation = validateCampaignForSending(campaign)
-    if (!validation.isValid) {
+    // Validate campaign has template and content
+    if (!campaign.metadata.email_template) {
       return {
         success: false,
         totalRecipients: 0,
         successfulSends: 0,
         failedSends: 0,
-        errors: validation.errors
+        errors: ['No email template selected for campaign']
       }
     }
 
-    // Get recipients
-    const recipients = await getRecipients(campaign, selectedContactIds)
-    
-    if (recipients.length === 0) {
+    const template = campaign.metadata.email_template
+    if (!template.metadata?.html_content || !template.metadata?.subject_line) {
       return {
         success: false,
         totalRecipients: 0,
         successfulSends: 0,
         failedSends: 0,
-        errors: ['No recipients found']
+        errors: ['Email template is missing content or subject line']
       }
     }
 
-    // Send emails
-    const sendResults = await sendEmailsToRecipients(campaign, recipients)
+    // 2. Get target contacts
+    let targetContacts: any[] = []
 
-    // Update campaign status and stats
-    await updateCampaignAfterSending(campaign, sendResults, recipients.length)
+    if (selectedContactIds && selectedContactIds.length > 0) {
+      // Use specific selected contacts
+      try {
+        const { objects: contacts } = await cosmic.objects.find({
+          type: 'contacts',
+          'metadata.subscription_status': 'Subscribed' // Use the value, not the key
+        })
+        targetContacts = contacts.filter(contact => selectedContactIds.includes(contact.id))
+      } catch (error) {
+        // Handle case where no contacts are found
+        targetContacts = []
+      }
+    } else {
+      // Use campaign target tags or all subscribed contacts
+      const targetTags = campaign.metadata.target_tags
 
-    return sendResults
+      try {
+        if (targetTags && targetTags.length > 0) {
+          // Get contacts that match target tags
+          const { objects: contacts } = await cosmic.objects.find({
+            type: 'contacts',
+            'metadata.subscription_status': 'Subscribed'
+          })
+          
+          // Filter contacts that have at least one matching tag
+          targetContacts = contacts.filter(contact => {
+            const contactTags = contact.metadata.tags || []
+            return targetTags.some(tag => contactTags.includes(tag))
+          })
+        } else {
+          // Get all subscribed contacts
+          const { objects: contacts } = await cosmic.objects.find({
+            type: 'contacts',
+            'metadata.subscription_status': 'Subscribed'
+          })
+          targetContacts = contacts
+        }
+      } catch (error) {
+        // Handle case where no contacts are found
+        targetContacts = []
+      }
+    }
+
+    if (targetContacts.length === 0) {
+      return {
+        success: false,
+        totalRecipients: 0,
+        successfulSends: 0,
+        failedSends: 0,
+        errors: ['No target contacts found']
+      }
+    }
+
+    // 3. Update campaign status to "Sending"
+    await cosmic.objects.updateOne(campaignId, {
+      metadata: {
+        ...campaign.metadata,
+        campaign_status: 'Sending' // Use the value directly
+      }
+    })
+
+    // 4. Send emails
+    const emailPromises = targetContacts.map(async (contact) => {
+      try {
+        await resend.emails.send({
+          from: 'EmailCraft Pro <noreply@emailcraft.pro>',
+          to: contact.metadata.email,
+          subject: template.metadata.subject_line,
+          html: template.metadata.html_content,
+          headers: {
+            'X-Campaign-ID': campaignId,
+            'X-Contact-ID': contact.id
+          }
+        })
+        return { success: true, contactId: contact.id }
+      } catch (error) {
+        console.error(`Failed to send to ${contact.metadata.email}:`, error)
+        return { success: false, contactId: contact.id, error: error instanceof Error ? error.message : 'Unknown error' }
+      }
+    })
+
+    const results = await Promise.all(emailPromises)
+    const successful = results.filter(r => r.success)
+    const failed = results.filter(r => !r.success)
+
+    // 5. Update campaign with final stats and status
+    const updatedStats = {
+      recipients: targetContacts.length,
+      delivered: successful.length,
+      opened: campaign.metadata.campaign_stats?.opened || 0,
+      clicked: campaign.metadata.campaign_stats?.clicked || 0,
+      open_rate: campaign.metadata.campaign_stats?.open_rate || 0,
+      click_rate: campaign.metadata.campaign_stats?.click_rate || 0
+    }
+
+    await cosmic.objects.updateOne(campaignId, {
+      metadata: {
+        ...campaign.metadata,
+        campaign_status: 'Sent', // Use the value directly
+        campaign_stats: updatedStats,
+        send_date: new Date().toISOString().split('T')[0] // Update send date to today
+      }
+    })
+
+    return {
+      success: successful.length > 0,
+      totalRecipients: targetContacts.length,
+      successfulSends: successful.length,
+      failedSends: failed.length,
+      errors: failed.map(f => f.error || 'Unknown error')
+    }
 
   } catch (error) {
-    console.error('Error sending campaign:', error)
-    return {
-      success: false,
-      totalRecipients: 0,
-      successfulSends: 0,
-      failedSends: 0,
-      errors: [error instanceof Error ? error.message : 'Unknown error occurred']
-    }
-  }
-}
-
-export async function scheduleCampaign(
-  campaignId: string,
-  scheduledDate: Date,
-  selectedContactIds?: string[]
-): Promise<SendResult> {
-  try {
-    // Get campaign details
-    const campaign = await getCampaign(campaignId)
-    if (!campaign) {
-      return {
-        success: false,
-        totalRecipients: 0,
-        successfulSends: 0,
-        failedSends: 0,
-        errors: ['Campaign not found']
-      }
-    }
-
-    // Validate campaign
-    const validation = validateCampaignForSending(campaign)
-    if (!validation.isValid) {
-      return {
-        success: false,
-        totalRecipients: 0,
-        successfulSends: 0,
-        failedSends: 0,
-        errors: validation.errors
-      }
-    }
-
-    // Get recipients count for scheduling
-    const recipients = await getRecipients(campaign, selectedContactIds)
+    console.error('Error in sendCampaign:', error)
     
-    if (recipients.length === 0) {
-      return {
-        success: false,
-        totalRecipients: 0,
-        successfulSends: 0,
-        failedSends: 0,
-        errors: ['No recipients found']
-      }
+    // Try to revert campaign status back to original on error
+    try {
+      await cosmic.objects.updateOne(campaignId, {
+        metadata: {
+          campaign_status: 'Draft' // Revert to Draft on error
+        }
+      })
+    } catch (revertError) {
+      console.error('Error reverting campaign status:', revertError)
     }
 
-    // Update campaign status to scheduled
-    const updateData = {
-      campaign_status: 'scheduled' as const,
-      send_date: scheduledDate.toISOString().split('T')[0],
-      campaign_name: campaign.metadata.campaign_name,
-      email_template: campaign.metadata.email_template.id,
-      target_tags: selectedContactIds || campaign.metadata.target_tags || [],
-      campaign_notes: campaign.metadata.campaign_notes || ''
-    }
-
-    await updateCampaign(campaignId, updateData)
-
-    return {
-      success: true,
-      totalRecipients: recipients.length,
-      successfulSends: 0,
-      failedSends: 0,
-      errors: []
-    }
-
-  } catch (error) {
-    console.error('Error scheduling campaign:', error)
     return {
       success: false,
       totalRecipients: 0,
@@ -176,178 +196,44 @@ export async function scheduleCampaign(
 }
 
 export async function sendTestEmail(
-  campaign: Campaign,
-  testEmail: string
+  templateId: string, 
+  testEmail: string,
+  campaignName?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const validation = validateCampaignForSending(campaign)
-    if (!validation.isValid) {
-      return {
-        success: false,
-        error: validation.errors.join(', ')
-      }
+    // Get the template
+    const { object: template } = await cosmic.objects.findOne({
+      type: 'email-templates',
+      id: templateId
+    })
+
+    if (!template) {
+      return { success: false, error: 'Template not found' }
     }
 
-    const template = campaign.metadata.email_template
-    const subjectLine = `[TEST] ${template.metadata.subject_line}`
+    if (!template.metadata.html_content || !template.metadata.subject_line) {
+      return { success: false, error: 'Template is missing content or subject line' }
+    }
 
-    const data = await resend.emails.send({
-      from: 'EmailCraft Pro <noreply@resend.dev>',
-      to: [testEmail],
-      subject: subjectLine,
+    // Send test email
+    await resend.emails.send({
+      from: 'EmailCraft Pro <noreply@emailcraft.pro>',
+      to: testEmail,
+      subject: `[TEST] ${template.metadata.subject_line}`,
       html: template.metadata.html_content,
       headers: {
-        'X-Entity-Ref-ID': `test-${campaign.id}-${Date.now()}`
+        'X-Test-Email': 'true',
+        'X-Template-ID': templateId,
+        ...(campaignName && { 'X-Campaign-Name': campaignName })
       }
     })
 
     return { success: true }
-
   } catch (error) {
     console.error('Error sending test email:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error occurred' 
     }
   }
-}
-
-async function getRecipients(
-  campaign: Campaign, 
-  selectedContactIds?: string[]
-): Promise<Contact[]> {
-  // If specific contacts are selected, use those
-  if (selectedContactIds && selectedContactIds.length > 0) {
-    const allContacts = await getContacts()
-    return allContacts.filter((contact: Contact) => 
-      selectedContactIds.includes(contact.id) &&
-      contact.metadata.subscription_status.key === 'subscribed'
-    )
-  }
-
-  // Otherwise, get contacts based on target tags or all subscribed
-  const allContacts = await getContacts()
-  let recipients = allContacts.filter((contact: Contact) => 
-    contact.metadata.subscription_status.key === 'subscribed'
-  )
-
-  // Filter by target tags if specified
-  if (campaign.metadata.target_tags && campaign.metadata.target_tags.length > 0) {
-    recipients = recipients.filter((contact: Contact) =>
-      contact.metadata.tags &&
-      campaign.metadata.target_tags!.some((tag: string) =>
-        contact.metadata.tags?.includes(tag)
-      )
-    )
-  }
-
-  return recipients
-}
-
-async function sendEmailsToRecipients(
-  campaign: Campaign,
-  recipients: Contact[]
-): Promise<SendResult> {
-  const template = campaign.metadata.email_template
-  let successfulSends = 0
-  let failedSends = 0
-  const errors: string[] = []
-
-  // Send emails in batches to avoid rate limits
-  const batchSize = 100
-  for (let i = 0; i < recipients.length; i += batchSize) {
-    const batch = recipients.slice(i, i + batchSize)
-    
-    const emailPromises = batch.map(async (contact: Contact) => {
-      try {
-        // Personalize the content
-        let personalizedContent = template.metadata.html_content
-        let personalizedSubject = template.metadata.subject_line
-
-        // Basic personalization
-        if (contact.metadata.first_name) {
-          personalizedContent = personalizedContent.replace(
-            /{{first_name}}/g, 
-            contact.metadata.first_name
-          )
-          personalizedSubject = personalizedSubject.replace(
-            /{{first_name}}/g, 
-            contact.metadata.first_name
-          )
-        }
-
-        // Add unsubscribe link placeholder
-        personalizedContent = personalizedContent.replace(
-          /{{unsubscribe_url}}/g,
-          `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/unsubscribe?contact=${contact.id}`
-        )
-
-        const data = await resend.emails.send({
-          from: 'EmailCraft Pro <noreply@resend.dev>',
-          to: [contact.metadata.email],
-          subject: personalizedSubject,
-          html: personalizedContent,
-          headers: {
-            'X-Entity-Ref-ID': `campaign-${campaign.id}-${contact.id}`
-          }
-        })
-
-        return { success: true, contact }
-      } catch (error) {
-        console.error(`Failed to send email to ${contact.metadata.email}:`, error)
-        return { 
-          success: false, 
-          contact, 
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }
-      }
-    })
-
-    const results = await Promise.all(emailPromises)
-    
-    interface EmailResult {
-      success: boolean;
-      contact: Contact;
-      error?: string;
-    }
-    
-    results.forEach((result: EmailResult) => {
-      if (result.success) {
-        successfulSends++
-      } else {
-        failedSends++
-        errors.push(`Failed to send to ${result.contact.metadata.email}: ${result.error}`)
-      }
-    })
-
-    // Small delay between batches
-    if (i + batchSize < recipients.length) {
-      await new Promise(resolve => setTimeout(resolve, 1000))
-    }
-  }
-
-  return {
-    success: successfulSends > 0,
-    totalRecipients: recipients.length,
-    successfulSends,
-    failedSends,
-    errors
-  }
-}
-
-async function updateCampaignAfterSending(
-  campaign: Campaign,
-  sendResults: SendResult,
-  totalRecipients: number
-): Promise<void> {
-  const updateData = {
-    campaign_status: 'sent' as const,
-    campaign_name: campaign.metadata.campaign_name,
-    email_template: campaign.metadata.email_template.id,
-    target_tags: campaign.metadata.target_tags || [],
-    send_date: campaign.metadata.send_date || '',
-    campaign_notes: campaign.metadata.campaign_notes || ''
-  }
-
-  await updateCampaign(campaign.id, updateData)
 }

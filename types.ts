@@ -21,8 +21,8 @@ export interface Contact extends CosmicObject {
     first_name?: string;
     last_name?: string;
     subscription_status: {
-      key: SubscriptionStatus;
-      value: string;
+      key: SubscriptionStatusKey;
+      value: SubscriptionStatusValue;
     };
     tags?: string[] | null;
     date_subscribed?: string;
@@ -38,8 +38,8 @@ export interface EmailTemplate extends CosmicObject {
     subject_line: string;
     html_content: string;
     template_category?: {
-      key: string;
-      value: string;
+      key: TemplateCategoryKey;
+      value: TemplateCategoryValue;
     };
     preview_image?: {
       url: string;
@@ -56,9 +56,9 @@ export interface Campaign extends CosmicObject {
     campaign_name: string;
     email_template: EmailTemplate;
     campaign_status: {
-      key: CampaignStatus;
-      value: string;
-    };
+      key: CampaignStatusKey;
+      value: CampaignStatusValue;
+    } | CampaignStatusValue; // Allow both formats for backward compatibility
     target_tags?: string[] | null;
     send_date?: string;
     campaign_notes?: string | null;
@@ -81,8 +81,8 @@ export interface Template extends CosmicObject {
     subject_line: string;
     html_content: string;
     template_category?: {
-      key: string;
-      value: string;
+      key: TemplateCategoryKey;
+      value: TemplateCategoryValue;
     };
     preview_image?: {
       url: string;
@@ -92,10 +92,15 @@ export interface Template extends CosmicObject {
   };
 }
 
-// Type literals for select-dropdown values
-export type SubscriptionStatus = 'subscribed' | 'unsubscribed' | 'pending';
-export type TemplateCategory = 'newsletter' | 'promotion' | 'welcome' | 'transactional' | 'announcement';
-export type CampaignStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'paused';
+// Type literals for select-dropdown keys and values
+export type SubscriptionStatusKey = 'subscribed' | 'unsubscribed' | 'pending';
+export type SubscriptionStatusValue = 'Subscribed' | 'Unsubscribed' | 'Pending Confirmation';
+
+export type TemplateCategoryKey = 'newsletter' | 'promotion' | 'welcome' | 'transactional' | 'announcement';
+export type TemplateCategoryValue = 'Newsletter' | 'Promotional' | 'Welcome Series' | 'Transactional' | 'Announcement';
+
+export type CampaignStatusKey = 'draft' | 'scheduled' | 'sending' | 'sent' | 'paused';
+export type CampaignStatusValue = 'Draft' | 'Scheduled' | 'Sending' | 'Sent' | 'Paused';
 
 // API response types
 export interface CosmicResponse<T> {
@@ -111,7 +116,7 @@ export interface CreateContactFormData {
   email: string;
   first_name?: string;
   last_name?: string;
-  subscription_status: SubscriptionStatus;
+  subscription_status: SubscriptionStatusKey;
   tags?: string[];
   date_subscribed?: string;
   notes?: string;
@@ -122,7 +127,7 @@ export interface CreateTemplateFormData {
   template_name: string;
   subject_line: string;
   html_content: string;
-  template_category?: TemplateCategory;
+  template_category?: TemplateCategoryKey;
   template_description?: string;
 }
 
@@ -130,7 +135,7 @@ export interface CreateCampaignFormData {
   title: string;
   campaign_name: string;
   email_template: string; // template ID
-  campaign_status: CampaignStatus;
+  campaign_status: CampaignStatusValue;
   target_tags?: string[];
   send_date?: string;
   campaign_notes?: string;
@@ -156,4 +161,27 @@ export interface AIGenerateTextResponse {
     input_tokens: number;
     output_tokens: number;
   };
+}
+
+// Utility functions for status conversion
+export function getStatusValue(status: { key: CampaignStatusKey; value: CampaignStatusValue } | CampaignStatusValue): CampaignStatusValue {
+  if (typeof status === 'string') {
+    return status;
+  }
+  return status.value;
+}
+
+export function getStatusKey(status: { key: CampaignStatusKey; value: CampaignStatusValue } | CampaignStatusValue): CampaignStatusKey {
+  if (typeof status === 'string') {
+    // Convert value back to key
+    const statusMap: Record<CampaignStatusValue, CampaignStatusKey> = {
+      'Draft': 'draft',
+      'Scheduled': 'scheduled',
+      'Sending': 'sending',
+      'Sent': 'sent',
+      'Paused': 'paused'
+    };
+    return statusMap[status] || 'draft';
+  }
+  return status.key;
 }

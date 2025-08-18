@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, Save, AlertTriangle, CheckCircle } from 'lucide-react'
-import { Campaign, EmailTemplate } from '@/types'
+import { Campaign, EmailTemplate, CampaignStatusValue, getStatusValue } from '@/types'
 
 interface UpdateCampaignModalProps {
   campaign: Campaign
@@ -15,8 +15,6 @@ interface UpdateResult {
   message: string
 }
 
-type CampaignStatus = "Draft" | "Scheduled" | "Sending" | "Sent" | "Paused"
-
 export default function UpdateCampaignModal({ campaign, onClose, onUpdated }: UpdateCampaignModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [updateResult, setUpdateResult] = useState<UpdateResult | null>(null)
@@ -26,11 +24,8 @@ export default function UpdateCampaignModal({ campaign, onClose, onUpdated }: Up
   // Form state
   const [campaignName, setCampaignName] = useState(campaign.metadata.campaign_name || '')
   const [selectedTemplateId, setSelectedTemplateId] = useState(campaign.metadata.email_template?.id || '')
-  const [campaignStatus, setCampaignStatus] = useState<CampaignStatus>(
-    // Handle both string and object formats for backward compatibility
-    typeof campaign.metadata.campaign_status === 'string' 
-      ? (campaign.metadata.campaign_status as CampaignStatus)
-      : (campaign.metadata.campaign_status.value as CampaignStatus) || 'Draft'
+  const [campaignStatus, setCampaignStatus] = useState<CampaignStatusValue>(
+    getStatusValue(campaign.metadata.campaign_status)
   )
   const [sendDate, setSendDate] = useState(campaign.metadata.send_date || '')
   const [campaignNotes, setCampaignNotes] = useState(campaign.metadata.campaign_notes || '')
@@ -94,7 +89,7 @@ export default function UpdateCampaignModal({ campaign, onClose, onUpdated }: Up
             slug: selectedTemplate.slug,
             title: selectedTemplate.title
           } : null,
-          campaign_status: campaignStatus, // Use string value directly
+          campaign_status: campaignStatus, // Use the CampaignStatusValue directly
           target_tags: targetTags.length > 0 ? targetTags : null,
           send_date: sendDate || null,
           campaign_notes: campaignNotes || null,
@@ -143,7 +138,7 @@ export default function UpdateCampaignModal({ campaign, onClose, onUpdated }: Up
   }
 
   const handleStatusChange = (value: string) => {
-    setCampaignStatus(value as CampaignStatus)
+    setCampaignStatus(value as CampaignStatusValue)
   }
 
   return (

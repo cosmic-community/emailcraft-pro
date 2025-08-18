@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, X } from 'lucide-react'
-import { EmailTemplate } from '@/types'
+import { EmailTemplate, CampaignStatusValue } from '@/types'
 
 const AVAILABLE_TAGS = [
   'Newsletter',
@@ -20,7 +20,7 @@ export default function CreateCampaignForm() {
   const [formData, setFormData] = useState({
     campaign_name: '',
     email_template: '',
-    campaign_status: 'Draft' as const, // Use string value directly
+    campaign_status: 'Draft' as CampaignStatusValue,
     target_tags: [] as string[],
     send_date: '',
     campaign_notes: ''
@@ -175,7 +175,7 @@ export default function CreateCampaignForm() {
               value={formData.campaign_status}
               onChange={(e) => setFormData(prev => ({ 
                 ...prev, 
-                campaign_status: e.target.value as any
+                campaign_status: e.target.value as CampaignStatusValue
               }))}
               className="input"
             >
