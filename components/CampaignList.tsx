@@ -31,10 +31,6 @@ function getStatusValue(campaign: Campaign): string {
 }
 
 function getStatusKey(campaign: Campaign): string {
-  // Handle both string and object formats for backward compatibility
-  if (typeof campaign.metadata.campaign_status === 'string') {
-    return (campaign.metadata.campaign_status || 'draft').toLowerCase()
-  }
   return campaign.metadata.campaign_status?.key || 'draft'
 }
 
