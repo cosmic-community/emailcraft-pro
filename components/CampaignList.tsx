@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { Campaign } from '@/types'
-import { Calendar, Users, TrendingUp, Mail, Send, Edit } from 'lucide-react'
+import { Calendar, Users, TrendingUp, Mail, Send, Edit, Copy } from 'lucide-react'
 import SendCampaignModal from './SendCampaignModal'
 import UpdateCampaignModal from './UpdateCampaignModal'
+import DuplicateCampaignModal from './DuplicateCampaignModal'
 
 interface CampaignListProps {
   campaigns: Campaign[]
@@ -51,6 +52,7 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
   const [showSendModal, setShowSendModal] = useState(false)
   const [showUpdateModal, setShowUpdateModal] = useState(false)
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
 
   const handleCampaignSent = () => {
     // Refresh the page to get updated campaign data
@@ -58,6 +60,11 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
   }
 
   const handleCampaignUpdated = () => {
+    // Refresh the page to get updated campaign data
+    window.location.reload()
+  }
+
+  const handleCampaignDuplicated = () => {
     // Refresh the page to get updated campaign data
     window.location.reload()
   }
@@ -83,10 +90,17 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
     setShowUpdateModal(true)
   }
 
+  const handleDuplicateClick = (e: React.MouseEvent, campaign: Campaign) => {
+    e.stopPropagation()
+    setSelectedCampaign(campaign)
+    setShowDuplicateModal(true)
+  }
+
   const closeModals = () => {
     setSelectedCampaign(null)
     setShowSendModal(false)
     setShowUpdateModal(false)
+    setShowDuplicateModal(false)
   }
 
   if (campaigns.length === 0) {
@@ -103,6 +117,7 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {campaigns.map((campaign) => {
           const statusValue = getStatusValue(campaign)
+          const statusKey = getStatusKey(campaign)
           const statusColor = getStatusColor(statusValue)
           
           return (
@@ -126,7 +141,7 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
                     {statusValue}
                   </span>
                   
-                  {getStatusKey(campaign) === 'draft' && campaign.metadata.email_template && (
+                  {statusKey === 'draft' && campaign.metadata.email_template && (
                     <button
                       onClick={(e) => handleSendClick(e, campaign)}
                       className="inline-flex items-center px-3 py-1 rounded-md text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors"
@@ -143,6 +158,16 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
                     <Edit className="h-3 w-3 mr-1" />
                     Edit
                   </button>
+
+                  {statusKey === 'sent' && (
+                    <button
+                      onClick={(e) => handleDuplicateClick(e, campaign)}
+                      className="inline-flex items-center px-3 py-1 rounded-md text-sm bg-green-600 text-white hover:bg-green-700 transition-colors"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Duplicate
+                    </button>
+                  )}
                 </div>
               </div>
               
@@ -226,6 +251,14 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
           campaign={selectedCampaign}
           onClose={closeModals}
           onUpdated={handleCampaignUpdated}
+        />
+      )}
+
+      {selectedCampaign && showDuplicateModal && (
+        <DuplicateCampaignModal
+          campaign={selectedCampaign}
+          onClose={closeModals}
+          onDuplicated={handleCampaignDuplicated}
         />
       )}
     </>

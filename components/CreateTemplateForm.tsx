@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Plus, X, Zap } from 'lucide-react'
+import HtmlPreviewTabs from './HtmlPreviewTabs'
 
 export default function CreateTemplateForm() {
   const [isOpen, setIsOpen] = useState(false)
@@ -114,7 +115,7 @@ export default function CreateTemplateForm() {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-screen overflow-y-auto">
+      <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-screen overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Create Email Template</h2>
           <button
@@ -126,18 +127,40 @@ export default function CreateTemplateForm() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Template Name *
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.template_name}
-              onChange={(e) => setFormData(prev => ({ ...prev, template_name: e.target.value }))}
-              className="input"
-              placeholder="My Awesome Template"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Template Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.template_name}
+                onChange={(e) => setFormData(prev => ({ ...prev, template_name: e.target.value }))}
+                className="input"
+                placeholder="My Awesome Template"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Template Category
+              </label>
+              <select
+                value={formData.template_category}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  template_category: e.target.value as any
+                }))}
+                className="input"
+              >
+                <option value="newsletter">Newsletter</option>
+                <option value="promotion">Promotional</option>
+                <option value="welcome">Welcome Series</option>
+                <option value="transactional">Transactional</option>
+                <option value="announcement">Announcement</option>
+              </select>
+            </div>
           </div>
 
           <div>
@@ -153,26 +176,6 @@ export default function CreateTemplateForm() {
               placeholder="📧 Your Monthly Update"
               maxLength={150}
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Template Category
-            </label>
-            <select
-              value={formData.template_category}
-              onChange={(e) => setFormData(prev => ({ 
-                ...prev, 
-                template_category: e.target.value as any
-              }))}
-              className="input"
-            >
-              <option value="newsletter">Newsletter</option>
-              <option value="promotion">Promotional</option>
-              <option value="welcome">Welcome Series</option>
-              <option value="transactional">Transactional</option>
-              <option value="announcement">Announcement</option>
-            </select>
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -203,12 +206,9 @@ export default function CreateTemplateForm() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               HTML Content *
             </label>
-            <textarea
-              required
-              value={formData.html_content}
-              onChange={(e) => setFormData(prev => ({ ...prev, html_content: e.target.value }))}
-              rows={12}
-              className="input font-mono text-sm"
+            <HtmlPreviewTabs
+              html={formData.html_content}
+              onChange={(html) => setFormData(prev => ({ ...prev, html_content: html }))}
               placeholder="<div>Your HTML content here...</div>"
             />
           </div>

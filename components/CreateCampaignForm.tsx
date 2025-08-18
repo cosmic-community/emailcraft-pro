@@ -1,10 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, X } from 'lucide-react'
-import { EmailTemplate, CampaignStatusValue } from '@/types'
+import { EmailTemplate } from '@/types'
+import { Plus, X, Calendar, Tag } from 'lucide-react'
+import ContactSelector from './ContactSelector'
 
-const AVAILABLE_TAGS = [
+interface CreateCampaignFormProps {
+  templates: EmailTemplate[]
+  preSelectedTemplateId?: string
+}
+
+const tagOptions = [
   'Newsletter',
   'Promotions', 
   'VIP Customer',
@@ -13,88 +19,75 @@ const AVAILABLE_TAGS = [
   'Marketing'
 ]
 
-export default function CreateCampaignForm() {
+export default function CreateCampaignForm({ templates, preSelectedTemplateId }: CreateCampaignFormProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [formData, setFormData] = useState({
     campaign_name: '',
-    email_template: '',
-    campaign_status: 'Draft' as CampaignStatusValue,
+    email_template: preSelectedTemplateId || '',
+    campaign_status: 'draft' as const,
     target_tags: [] as string[],
     send_date: '',
     campaign_notes: ''
   })
 
+  // Open modal automatically if template is pre-selected from URL
   useEffect(() => {
-    if (isOpen) {
-      loadTemplates()
-    }
-  }, [isOpen])
-
-  const loadTemplates = async () => {
-    try {
-      const response = await fetch('/api/templates')
-      const data = await response.json()
-      
-      if (data.success) {
-        setTemplates(data.templates)
-      } else {
-        console.error('Error loading templates:', data.error)
+    if (preSelectedTemplateId) {
+      setIsOpen(true)
+      const template = templates.find(t => t.id === preSelectedTemplateId)
+      if (template) {
+        setFormData(prev => ({ 
+          ...prev, 
+          campaign_name: `Campaign using ${template.metadata.template_name}`,
+          email_template: preSelectedTemplateId 
+        }))
       }
-    } catch (error) {
-      console.error('Error loading templates:', error)
     }
-  }
+  }, [preSelectedTemplateId, templates])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      // Prepare the data with proper title and formatting
-      const campaignData = {
-        title: formData.campaign_name, // Use campaign name as title
-        ...formData
-      }
-
       const response = await fetch('/api/campaigns', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(campaignData),
+        body: JSON.stringify(formData),
       })
 
-      const data = await response.json()
-
-      if (data.success) {
-        // Reset form and close modal
-        setFormData({
-          campaign_name: '',
-          email_template: '',
-          campaign_status: 'Draft',
-          target_tags: [],
-          send_date: '',
-          campaign_notes: ''
-        })
-        setIsOpen(false)
-        
-        // Refresh the page to show new campaign
-        window.location.reload()
-      } else {
-        console.error('Error creating campaign:', data.error)
-        alert(`Failed to create campaign: ${data.error}`)
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create campaign')
       }
+
+      const result = await response.json()
+      
+      // Reset form and close modal
+      setFormData({
+        campaign_name: '',
+        email_template: '',
+        campaign_status: 'draft',
+        target_tags: [],
+        send_date: '',
+        campaign_notes: ''
+      })
+      setIsOpen(false)
+      
+      // Refresh the page to show new campaign
+      window.location.reload()
     } catch (error) {
       console.error('Error creating campaign:', error)
-      alert('Failed to create campaign. Please try again.')
+      alert(error instanceof Error ? error.message : 'Failed to create campaign. Please try again.')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const toggleTag = (tag: string) => {
+  const handleTagToggle = (tag: string) => {
     setFormData(prev => ({
       ...prev,
       target_tags: prev.target_tags.includes(tag)
@@ -119,7 +112,7 @@ export default function CreateCampaignForm() {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-screen overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Create New Campaign</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Create Email Campaign</h2>
           <button
             onClick={() => setIsOpen(false)}
             className="text-gray-400 hover:text-gray-600"
@@ -139,7 +132,7 @@ export default function CreateCampaignForm() {
               value={formData.campaign_name}
               onChange={(e) => setFormData(prev => ({ ...prev, campaign_name: e.target.value }))}
               className="input"
-              placeholder="Spring Sale Campaign"
+              placeholder="My Email Campaign"
             />
           </div>
 
@@ -160,65 +153,51 @@ export default function CreateCampaignForm() {
                 </option>
               ))}
             </select>
-            {templates.length === 0 && (
-              <p className="text-sm text-red-600 mt-1">
-                No templates available. Create a template first.
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+              <Tag className="h-4 w-4 mr-1" />
+              Target Tags
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {tagOptions.map((tag) => (
+                <label
+                  key={tag}
+                  className="flex items-center space-x-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.target_tags.includes(tag)}
+                    onChange={() => handleTagToggle(tag)}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm">{tag}</span>
+                </label>
+              ))}
+            </div>
+            {formData.target_tags.length === 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                If no tags are selected, campaign will be sent to all subscribers
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Campaign Status
-            </label>
-            <select
-              value={formData.campaign_status}
-              onChange={(e) => setFormData(prev => ({ 
-                ...prev, 
-                campaign_status: e.target.value as CampaignStatusValue
-              }))}
-              className="input"
-            >
-              <option value="Draft">Draft</option>
-              <option value="Scheduled">Scheduled</option>
-              <option value="Sending">Sending</option>
-              <option value="Sent">Sent</option>
-              <option value="Paused">Paused</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Target Tags
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {AVAILABLE_TAGS.map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => toggleTag(tag)}
-                  className={`px-3 py-1 rounded-md text-sm transition-colors ${
-                    formData.target_tags.includes(tag)
-                      ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                      : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
-                  }`}
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Send Date
+            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+              <Calendar className="h-4 w-4 mr-1" />
+              Send Date (Optional)
             </label>
             <input
               type="date"
               value={formData.send_date}
               onChange={(e) => setFormData(prev => ({ ...prev, send_date: e.target.value }))}
               className="input"
+              min={new Date().toISOString().split('T')[0]}
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Leave empty to save as draft for manual sending
+            </p>
           </div>
 
           <div>
@@ -244,7 +223,7 @@ export default function CreateCampaignForm() {
             </button>
             <button
               type="submit"
-              disabled={isLoading || templates.length === 0}
+              disabled={isLoading}
               className="flex-1 btn btn-primary disabled:opacity-50"
             >
               {isLoading ? 'Creating...' : 'Create Campaign'}
