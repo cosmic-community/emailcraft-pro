@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { EmailTemplate } from '@/types'
-import { FileText, Eye, Copy } from 'lucide-react'
+import { FileText, Copy } from 'lucide-react'
 import TemplatePreviewModal from './TemplatePreviewModal'
 
 interface TemplateGridProps {
@@ -88,7 +88,6 @@ export default function TemplateGrid({ templates }: TemplateGridProps) {
                   onClick={(e) => handlePreview(e, template)}
                   className="flex-1 btn btn-primary text-sm"
                 >
-                  <Eye className="h-4 w-4 mr-1" />
                   Preview
                 </button>
                 <button 
