@@ -119,7 +119,6 @@ export async function sendCampaign(campaignId: string, selectedContactIds?: stri
     // 3. Update campaign status to "Sending"
     await cosmic.objects.updateOne(campaignId, {
       metadata: {
-        ...campaign.metadata,
         campaign_status: 'Sending' // Use the value directly
       }
     })
@@ -160,7 +159,6 @@ export async function sendCampaign(campaignId: string, selectedContactIds?: stri
 
     await cosmic.objects.updateOne(campaignId, {
       metadata: {
-        ...campaign.metadata,
         campaign_status: 'Sent', // Use the value directly
         campaign_stats: updatedStats,
         send_date: new Date().toISOString().split('T')[0] // Update send date to today
@@ -240,7 +238,6 @@ export async function scheduleCampaign(
     // Update campaign status to "Scheduled"
     await cosmic.objects.updateOne(campaignId, {
       metadata: {
-        ...campaign.metadata,
         campaign_status: 'Scheduled',
         send_date: scheduledDate.toISOString().split('T')[0]
       }
