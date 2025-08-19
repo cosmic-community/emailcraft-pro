@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Plus, X, Zap } from 'lucide-react'
 import HtmlPreviewTabs from './HtmlPreviewTabs'
 
@@ -8,6 +8,7 @@ export default function CreateTemplateForm() {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [formData, setFormData] = useState({
     template_name: '',
     subject_line: '',
@@ -16,6 +17,25 @@ export default function CreateTemplateForm() {
     template_description: '',
     ai_prompt: ''
   })
+
+  // Auto-resize textarea function
+  const autoResizeTextarea = (textarea: HTMLTextAreaElement) => {
+    textarea.style.height = 'auto'
+    textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px'
+  }
+
+  // Handle AI prompt change with auto-resize
+  const handleAIPromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setFormData(prev => ({ ...prev, ai_prompt: e.target.value }))
+    autoResizeTextarea(e.target)
+  }
+
+  // Auto-resize on mount and when value changes
+  useEffect(() => {
+    if (textareaRef.current) {
+      autoResizeTextarea(textareaRef.current)
+    }
+  }, [formData.ai_prompt])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -183,13 +203,15 @@ export default function CreateTemplateForm() {
               <Zap className="h-4 w-4 mr-2" />
               AI Template Generator
             </h3>
-            <div className="flex space-x-2">
-              <input
-                type="text"
+            <div className="space-y-2">
+              <textarea
+                ref={textareaRef}
                 value={formData.ai_prompt}
-                onChange={(e) => setFormData(prev => ({ ...prev, ai_prompt: e.target.value }))}
-                placeholder="Describe the email template you want (e.g., 'professional newsletter with product highlights')"
-                className="flex-1 input"
+                onChange={handleAIPromptChange}
+                placeholder="Describe the email template you want (e.g., 'professional newsletter with product highlights and modern design')"
+                className="w-full input resize-none overflow-hidden min-h-[2.5rem]"
+                style={{ maxHeight: '200px' }}
+                rows={1}
               />
               <button
                 type="button"
@@ -197,7 +219,7 @@ export default function CreateTemplateForm() {
                 disabled={isGenerating}
                 className="btn btn-primary whitespace-nowrap disabled:opacity-50"
               >
-                {isGenerating ? 'Generating...' : 'Generate'}
+                {isGenerating ? 'Generating...' : 'Generate Template'}
               </button>
             </div>
           </div>
