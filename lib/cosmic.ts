@@ -1,4 +1,15 @@
 import { createBucketClient } from '@cosmicjs/sdk'
+import type { 
+  EmailTemplate, 
+  Campaign, 
+  Contact,
+  CampaignStatusValue,
+  CampaignStatusKey,
+  TemplateCategoryKey,
+  TemplateCategoryValue,
+  SubscriptionStatusKey,
+  SubscriptionStatusValue
+} from '../types'
 
 const cosmic = createBucketClient({
   bucketSlug: process.env.COSMIC_BUCKET_SLUG!,
@@ -6,83 +17,83 @@ const cosmic = createBucketClient({
   writeKey: process.env.COSMIC_WRITE_KEY!,
 })
 
-// Template interface
-export interface Template {
-  id: string
-  slug: string
-  title: string
-  status: string
-  created_at: string
-  modified_at: string
-  metadata: {
-    template_name: string
-    subject_line: string
-    html_content: string
-    template_category: string
-    template_description: string
+// Helper function to convert status string to proper format
+function formatCampaignStatus(status: string): { key: CampaignStatusKey; value: CampaignStatusValue } {
+  const statusMap: Record<string, { key: CampaignStatusKey; value: CampaignStatusValue }> = {
+    'draft': { key: 'draft', value: 'Draft' },
+    'scheduled': { key: 'scheduled', value: 'Scheduled' },
+    'sending': { key: 'sending', value: 'Sending' },
+    'sent': { key: 'sent', value: 'Sent' },
+    'paused': { key: 'paused', value: 'Paused' },
+    'Draft': { key: 'draft', value: 'Draft' },
+    'Scheduled': { key: 'scheduled', value: 'Scheduled' },
+    'Sending': { key: 'sending', value: 'Sending' },
+    'Sent': { key: 'sent', value: 'Sent' },
+    'Paused': { key: 'paused', value: 'Paused' }
   }
+  return statusMap[status] || { key: 'draft', value: 'Draft' }
 }
 
-// Campaign interface
-export interface Campaign {
-  id: string
-  slug: string
-  title: string
-  status: string
-  created_at: string
-  modified_at: string
-  metadata: {
-    campaign_name: string
-    subject_line: string
-    email_template: {
-      id: string
-      slug: string
-      title: string
-      metadata: {
-        html_content: string
-      }
-    }
-    recipient_contacts: Array<{
-      id: string
-      slug: string
-      title: string
-      metadata: {
-        email: string
-        name: string
-      }
-    }>
-    campaign_status: string
-    scheduled_date?: string
-    sent_count: number
-    open_count: number
-    click_count: number
+// Helper function to format template category
+function formatTemplateCategory(category: string): { key: TemplateCategoryKey; value: TemplateCategoryValue } {
+  const categoryMap: Record<string, { key: TemplateCategoryKey; value: TemplateCategoryValue }> = {
+    'newsletter': { key: 'newsletter', value: 'Newsletter' },
+    'promotion': { key: 'promotion', value: 'Promotional' },
+    'welcome': { key: 'welcome', value: 'Welcome Series' },
+    'transactional': { key: 'transactional', value: 'Transactional' },
+    'announcement': { key: 'announcement', value: 'Announcement' },
+    'Newsletter': { key: 'newsletter', value: 'Newsletter' },
+    'Promotional': { key: 'promotion', value: 'Promotional' },
+    'Welcome Series': { key: 'welcome', value: 'Welcome Series' },
+    'Transactional': { key: 'transactional', value: 'Transactional' },
+    'Announcement': { key: 'announcement', value: 'Announcement' }
   }
+  return categoryMap[category] || { key: 'newsletter', value: 'Newsletter' }
 }
 
-// Contact interface
-export interface Contact {
-  id: string
-  slug: string
-  title: string
-  status: string
-  created_at: string
-  modified_at: string
-  metadata: {
-    name: string
-    email: string
-    tags?: string[]
+// Helper function to format subscription status
+function formatSubscriptionStatus(status: string): { key: SubscriptionStatusKey; value: SubscriptionStatusValue } {
+  const statusMap: Record<string, { key: SubscriptionStatusKey; value: SubscriptionStatusValue }> = {
+    'subscribed': { key: 'subscribed', value: 'Subscribed' },
+    'unsubscribed': { key: 'unsubscribed', value: 'Unsubscribed' },
+    'pending': { key: 'pending', value: 'Pending Confirmation' },
+    'Subscribed': { key: 'subscribed', value: 'Subscribed' },
+    'Unsubscribed': { key: 'unsubscribed', value: 'Unsubscribed' },
+    'Pending Confirmation': { key: 'pending', value: 'Pending Confirmation' }
   }
+  return statusMap[status] || { key: 'subscribed', value: 'Subscribed' }
 }
 
 // Get all templates
-export async function getTemplates(): Promise<Template[]> {
+export async function getTemplates(): Promise<EmailTemplate[]> {
   try {
     const { objects } = await cosmic.objects
       .find({ type: 'email-templates' })
-      .props(['id', 'slug', 'title', 'status', 'created_at', 'modified_at', 'metadata'])
+      .props(['id', 'slug', 'title', 'status', 'created_at', 'modified_at', 'metadata', 'bucket'])
       .depth(1)
     
-    return objects as Template[]
+    return objects.map(obj => ({
+      id: obj.id,
+      slug: obj.slug,
+      title: obj.title,
+      content: obj.content || '',
+      bucket: obj.bucket || process.env.COSMIC_BUCKET_SLUG || '',
+      created_at: obj.created_at,
+      modified_at: obj.modified_at,
+      status: obj.status,
+      published_at: obj.published_at || undefined,
+      type: 'email-templates' as const,
+      metadata: {
+        template_name: obj.metadata?.template_name || obj.title,
+        subject_line: obj.metadata?.subject_line || '',
+        html_content: obj.metadata?.html_content || '',
+        template_category: obj.metadata?.template_category 
+          ? formatTemplateCategory(obj.metadata.template_category) 
+          : undefined,
+        preview_image: obj.metadata?.preview_image || null,
+        template_description: obj.metadata?.template_description || null
+      }
+    })) as EmailTemplate[]
   } catch (error) {
     console.error('Error fetching templates:', error)
     return []
@@ -90,14 +101,37 @@ export async function getTemplates(): Promise<Template[]> {
 }
 
 // Get template by ID
-export async function getTemplate(id: string): Promise<Template | null> {
+export async function getTemplate(id: string): Promise<EmailTemplate | null> {
   try {
     const { object } = await cosmic.objects
       .findOne({ id, type: 'email-templates' })
-      .props(['id', 'slug', 'title', 'status', 'created_at', 'modified_at', 'metadata'])
+      .props(['id', 'slug', 'title', 'status', 'created_at', 'modified_at', 'metadata', 'bucket'])
       .depth(1)
     
-    return object as Template
+    if (!object) return null
+
+    return {
+      id: object.id,
+      slug: object.slug,
+      title: object.title,
+      content: object.content || '',
+      bucket: object.bucket || process.env.COSMIC_BUCKET_SLUG || '',
+      created_at: object.created_at,
+      modified_at: object.modified_at,
+      status: object.status,
+      published_at: object.published_at || undefined,
+      type: 'email-templates' as const,
+      metadata: {
+        template_name: object.metadata?.template_name || object.title,
+        subject_line: object.metadata?.subject_line || '',
+        html_content: object.metadata?.html_content || '',
+        template_category: object.metadata?.template_category 
+          ? formatTemplateCategory(object.metadata.template_category) 
+          : undefined,
+        preview_image: object.metadata?.preview_image || null,
+        template_description: object.metadata?.template_description || null
+      }
+    } as EmailTemplate
   } catch (error) {
     console.error('Error fetching template:', error)
     return null
@@ -111,7 +145,7 @@ export async function createTemplate(templateData: {
   html_content: string
   template_category: string
   template_description: string
-}): Promise<Template> {
+}): Promise<EmailTemplate> {
   const { object } = await cosmic.objects.insertOne({
     type: 'email-templates',
     title: templateData.template_name,
@@ -125,18 +159,61 @@ export async function createTemplate(templateData: {
     }
   })
   
-  return object as Template
+  return {
+    id: object.id,
+    slug: object.slug,
+    title: object.title,
+    content: object.content || '',
+    bucket: object.bucket || process.env.COSMIC_BUCKET_SLUG || '',
+    created_at: object.created_at,
+    modified_at: object.modified_at,
+    status: object.status,
+    published_at: object.published_at || undefined,
+    type: 'email-templates' as const,
+    metadata: {
+      template_name: object.metadata?.template_name || object.title,
+      subject_line: object.metadata?.subject_line || '',
+      html_content: object.metadata?.html_content || '',
+      template_category: object.metadata?.template_category 
+        ? formatTemplateCategory(object.metadata.template_category) 
+        : undefined,
+      preview_image: object.metadata?.preview_image || null,
+      template_description: object.metadata?.template_description || null
+    }
+  } as EmailTemplate
 }
 
 // Get all campaigns
 export async function getCampaigns(): Promise<Campaign[]> {
   try {
     const { objects } = await cosmic.objects
-      .find({ type: 'email-campaigns' })
-      .props(['id', 'slug', 'title', 'status', 'created_at', 'modified_at', 'metadata'])
+      .find({ type: 'campaigns' })
+      .props(['id', 'slug', 'title', 'status', 'created_at', 'modified_at', 'metadata', 'bucket'])
       .depth(2)
     
-    return objects as Campaign[]
+    return objects.map(obj => ({
+      id: obj.id,
+      slug: obj.slug,
+      title: obj.title,
+      content: obj.content || '',
+      bucket: obj.bucket || process.env.COSMIC_BUCKET_SLUG || '',
+      created_at: obj.created_at,
+      modified_at: obj.modified_at,
+      status: obj.status,
+      published_at: obj.published_at || undefined,
+      type: 'campaigns' as const,
+      metadata: {
+        campaign_name: obj.metadata?.campaign_name || obj.title,
+        email_template: obj.metadata?.email_template || {} as EmailTemplate,
+        campaign_status: obj.metadata?.campaign_status 
+          ? formatCampaignStatus(obj.metadata.campaign_status)
+          : formatCampaignStatus('draft'),
+        target_tags: obj.metadata?.target_tags || null,
+        send_date: obj.metadata?.send_date || undefined,
+        campaign_notes: obj.metadata?.campaign_notes || null,
+        campaign_stats: obj.metadata?.campaign_stats || undefined
+      }
+    })) as Campaign[]
   } catch (error) {
     console.error('Error fetching campaigns:', error)
     return []
@@ -147,11 +224,35 @@ export async function getCampaigns(): Promise<Campaign[]> {
 export async function getCampaign(id: string): Promise<Campaign | null> {
   try {
     const { object } = await cosmic.objects
-      .findOne({ id, type: 'email-campaigns' })
-      .props(['id', 'slug', 'title', 'status', 'created_at', 'modified_at', 'metadata'])
+      .findOne({ id, type: 'campaigns' })
+      .props(['id', 'slug', 'title', 'status', 'created_at', 'modified_at', 'metadata', 'bucket'])
       .depth(2)
     
-    return object as Campaign
+    if (!object) return null
+
+    return {
+      id: object.id,
+      slug: object.slug,
+      title: object.title,
+      content: object.content || '',
+      bucket: object.bucket || process.env.COSMIC_BUCKET_SLUG || '',
+      created_at: object.created_at,
+      modified_at: object.modified_at,
+      status: object.status,
+      published_at: object.published_at || undefined,
+      type: 'campaigns' as const,
+      metadata: {
+        campaign_name: object.metadata?.campaign_name || object.title,
+        email_template: object.metadata?.email_template || {} as EmailTemplate,
+        campaign_status: object.metadata?.campaign_status 
+          ? formatCampaignStatus(object.metadata.campaign_status)
+          : formatCampaignStatus('draft'),
+        target_tags: object.metadata?.target_tags || null,
+        send_date: object.metadata?.send_date || undefined,
+        campaign_notes: object.metadata?.campaign_notes || null,
+        campaign_stats: object.metadata?.campaign_stats || undefined
+      }
+    } as Campaign
   } catch (error) {
     console.error('Error fetching campaign:', error)
     return null
@@ -168,7 +269,7 @@ export async function createCampaign(campaignData: {
   scheduled_date?: string
 }): Promise<Campaign> {
   const { object } = await cosmic.objects.insertOne({
-    type: 'email-campaigns',
+    type: 'campaigns',
     title: campaignData.campaign_name,
     status: 'published',
     metadata: {
@@ -184,7 +285,29 @@ export async function createCampaign(campaignData: {
     }
   })
   
-  return object as Campaign
+  return {
+    id: object.id,
+    slug: object.slug,
+    title: object.title,
+    content: object.content || '',
+    bucket: object.bucket || process.env.COSMIC_BUCKET_SLUG || '',
+    created_at: object.created_at,
+    modified_at: object.modified_at,
+    status: object.status,
+    published_at: object.published_at || undefined,
+    type: 'campaigns' as const,
+    metadata: {
+      campaign_name: object.metadata?.campaign_name || object.title,
+      email_template: object.metadata?.email_template || {} as EmailTemplate,
+      campaign_status: object.metadata?.campaign_status 
+        ? formatCampaignStatus(object.metadata.campaign_status)
+        : formatCampaignStatus('draft'),
+      target_tags: object.metadata?.target_tags || null,
+      send_date: object.metadata?.send_date || undefined,
+      campaign_notes: object.metadata?.campaign_notes || null,
+      campaign_stats: object.metadata?.campaign_stats || undefined
+    }
+  } as Campaign
 }
 
 // Update campaign
@@ -193,18 +316,62 @@ export async function updateCampaign(id: string, updateData: Partial<Campaign['m
     metadata: updateData
   })
   
-  return object as Campaign
+  return {
+    id: object.id,
+    slug: object.slug,
+    title: object.title,
+    content: object.content || '',
+    bucket: object.bucket || process.env.COSMIC_BUCKET_SLUG || '',
+    created_at: object.created_at,
+    modified_at: object.modified_at,
+    status: object.status,
+    published_at: object.published_at || undefined,
+    type: 'campaigns' as const,
+    metadata: {
+      campaign_name: object.metadata?.campaign_name || object.title,
+      email_template: object.metadata?.email_template || {} as EmailTemplate,
+      campaign_status: object.metadata?.campaign_status 
+        ? formatCampaignStatus(object.metadata.campaign_status)
+        : formatCampaignStatus('draft'),
+      target_tags: object.metadata?.target_tags || null,
+      send_date: object.metadata?.send_date || undefined,
+      campaign_notes: object.metadata?.campaign_notes || null,
+      campaign_stats: object.metadata?.campaign_stats || undefined
+    }
+  } as Campaign
 }
 
 // Get all contacts
 export async function getContacts(): Promise<Contact[]> {
   try {
     const { objects } = await cosmic.objects
-      .find({ type: 'email-contacts' })
-      .props(['id', 'slug', 'title', 'status', 'created_at', 'modified_at', 'metadata'])
+      .find({ type: 'contacts' })
+      .props(['id', 'slug', 'title', 'status', 'created_at', 'modified_at', 'metadata', 'bucket'])
       .depth(1)
     
-    return objects as Contact[]
+    return objects.map(obj => ({
+      id: obj.id,
+      slug: obj.slug,
+      title: obj.title,
+      content: obj.content || '',
+      bucket: obj.bucket || process.env.COSMIC_BUCKET_SLUG || '',
+      created_at: obj.created_at,
+      modified_at: obj.modified_at,
+      status: obj.status,
+      published_at: obj.published_at || undefined,
+      type: 'contacts' as const,
+      metadata: {
+        email: obj.metadata?.email || '',
+        first_name: obj.metadata?.first_name || undefined,
+        last_name: obj.metadata?.last_name || undefined,
+        subscription_status: obj.metadata?.subscription_status 
+          ? formatSubscriptionStatus(obj.metadata.subscription_status)
+          : formatSubscriptionStatus('subscribed'),
+        tags: obj.metadata?.tags || null,
+        date_subscribed: obj.metadata?.date_subscribed || undefined,
+        notes: obj.metadata?.notes || null
+      }
+    })) as Contact[]
   } catch (error) {
     console.error('Error fetching contacts:', error)
     return []
@@ -218,7 +385,7 @@ export async function createContact(contactData: {
   tags?: string[]
 }): Promise<Contact> {
   const { object } = await cosmic.objects.insertOne({
-    type: 'email-contacts',
+    type: 'contacts',
     title: contactData.name,
     status: 'published',
     metadata: {
@@ -228,5 +395,27 @@ export async function createContact(contactData: {
     }
   })
   
-  return object as Contact
+  return {
+    id: object.id,
+    slug: object.slug,
+    title: object.title,
+    content: object.content || '',
+    bucket: object.bucket || process.env.COSMIC_BUCKET_SLUG || '',
+    created_at: object.created_at,
+    modified_at: object.modified_at,
+    status: object.status,
+    published_at: object.published_at || undefined,
+    type: 'contacts' as const,
+    metadata: {
+      email: object.metadata?.email || contactData.email,
+      first_name: object.metadata?.first_name || undefined,
+      last_name: object.metadata?.last_name || undefined,
+      subscription_status: object.metadata?.subscription_status 
+        ? formatSubscriptionStatus(object.metadata.subscription_status)
+        : formatSubscriptionStatus('subscribed'),
+      tags: object.metadata?.tags || contactData.tags || null,
+      date_subscribed: object.metadata?.date_subscribed || undefined,
+      notes: object.metadata?.notes || null
+    }
+  } as Contact
 }
