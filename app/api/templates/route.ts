@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const template = await createTemplate({
+      title: template_name, // Add required title property using template_name
       template_name,
       subject_line,
       html_content,
