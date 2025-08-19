@@ -282,7 +282,7 @@ export async function createCampaign(campaignData: {
   email_template: string
   recipient_contacts: string[]
   campaign_status: string
-  scheduled_date?: string
+  send_date?: string
 }): Promise<Campaign> {
   const { object } = await cosmic.objects.insertOne({
     type: 'campaigns',
@@ -294,7 +294,7 @@ export async function createCampaign(campaignData: {
       email_template: campaignData.email_template,
       recipient_contacts: campaignData.recipient_contacts,
       campaign_status: campaignData.campaign_status,
-      scheduled_date: campaignData.scheduled_date || '',
+      send_date: campaignData.send_date || '',
       sent_count: 0,
       open_count: 0,
       click_count: 0
