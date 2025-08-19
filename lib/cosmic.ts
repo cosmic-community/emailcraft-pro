@@ -76,6 +76,9 @@ export async function getEmailTemplates(): Promise<EmailTemplate[]> {
   }
 }
 
+// Export alias for backward compatibility
+export const getTemplates = getEmailTemplates
+
 export async function getEmailTemplateById(id: string): Promise<EmailTemplate | null> {
   try {
     const response = await cosmic.objects
@@ -109,6 +112,9 @@ export async function createEmailTemplate(data: CreateTemplateFormData): Promise
   const response = await cosmic.objects.insertOne(templateData)
   return response.object as EmailTemplate
 }
+
+// Export alias for backward compatibility
+export const createTemplate = createEmailTemplate
 
 function getTemplateCategoryValue(key: string): string {
   const categoryMap: Record<string, string> = {
