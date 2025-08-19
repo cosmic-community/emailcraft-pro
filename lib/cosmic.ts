@@ -13,6 +13,7 @@ const cosmic = createBucketClient({
 export const cosmicRead = createBucketClient({
   bucketSlug: process.env.COSMIC_BUCKET_SLUG as string,
   readKey: process.env.COSMIC_READ_KEY as string,
+  apiEnvoronment: "staging"
 })
 
 // Contact functions
