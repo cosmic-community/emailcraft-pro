@@ -11,6 +11,21 @@ import type {
   SubscriptionStatusValue
 } from '../types'
 
+// Define Cosmic object interface for type safety
+interface CosmicObject {
+  id: string
+  slug: string
+  title: string
+  content?: string
+  bucket?: string
+  created_at: string
+  modified_at: string
+  status: string
+  published_at?: string
+  type: string
+  metadata?: Record<string, any>
+}
+
 const cosmic = createBucketClient({
   bucketSlug: process.env.COSMIC_BUCKET_SLUG!,
   readKey: process.env.COSMIC_READ_KEY!,
@@ -72,7 +87,7 @@ export async function getTemplates(): Promise<EmailTemplate[]> {
       .props(['id', 'slug', 'title', 'status', 'created_at', 'modified_at', 'metadata', 'bucket'])
       .depth(1)
     
-    return objects.map(obj => ({
+    return objects.map((obj: CosmicObject) => ({
       id: obj.id,
       slug: obj.slug,
       title: obj.title,
@@ -191,7 +206,7 @@ export async function getCampaigns(): Promise<Campaign[]> {
       .props(['id', 'slug', 'title', 'status', 'created_at', 'modified_at', 'metadata', 'bucket'])
       .depth(2)
     
-    return objects.map(obj => ({
+    return objects.map((obj: CosmicObject) => ({
       id: obj.id,
       slug: obj.slug,
       title: obj.title,
@@ -349,7 +364,7 @@ export async function getContacts(): Promise<Contact[]> {
       .props(['id', 'slug', 'title', 'status', 'created_at', 'modified_at', 'metadata', 'bucket'])
       .depth(1)
     
-    return objects.map(obj => ({
+    return objects.map((obj: CosmicObject) => ({
       id: obj.id,
       slug: obj.slug,
       title: obj.title,
