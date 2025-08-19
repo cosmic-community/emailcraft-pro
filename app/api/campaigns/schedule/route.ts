@@ -4,7 +4,7 @@ import { scheduleCampaign } from '@/lib/email'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { campaignId, scheduledDate, selectedContacts } = body
+    const { campaignId, sendDate, selectedContacts } = body
 
     if (!campaignId) {
       return NextResponse.json(
@@ -13,18 +13,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!scheduledDate) {
+    if (!sendDate) {
       return NextResponse.json(
-        { error: 'Scheduled date is required' },
+        { error: 'Send date is required' },
         { status: 400 }
       )
     }
 
-    // Validate that scheduled date is in the future
-    const scheduledDateTime = new Date(scheduledDate)
-    if (scheduledDateTime <= new Date()) {
+    // Validate that send date is in the future
+    const sendDateTime = new Date(sendDate)
+    if (sendDateTime <= new Date()) {
       return NextResponse.json(
-        { error: 'Scheduled date must be in the future' },
+        { error: 'Send date must be in the future' },
         { status: 400 }
       )
     }
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const result = await scheduleCampaign(campaignId, scheduledDateTime, selectedContacts)
+    const result = await scheduleCampaign(campaignId, sendDateTime, selectedContacts)
 
     if (!result.success) {
       return NextResponse.json(
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Campaign scheduled successfully for ${scheduledDateTime.toLocaleString()}. ${result.totalRecipients} recipients will be contacted.`,
+      message: `Campaign scheduled successfully for ${sendDateTime.toLocaleString()}. ${result.totalRecipients} recipients will be contacted.`,
       stats: {
         totalRecipients: result.totalRecipients,
         successfulSends: 0,
