@@ -13,7 +13,7 @@ export default function CreateTemplateForm() {
     template_name: '',
     subject_line: '',
     html_content: '',
-    template_category: 'newsletter' as const,
+    template_category: 'Newsletter' as const,
     template_description: '',
     ai_prompt: ''
   })
@@ -68,7 +68,7 @@ export default function CreateTemplateForm() {
         template_name: '',
         subject_line: '',
         html_content: '',
-        template_category: 'newsletter',
+        template_category: 'Newsletter',
         template_description: '',
         ai_prompt: ''
       })
@@ -174,11 +174,11 @@ export default function CreateTemplateForm() {
                 }))}
                 className="input"
               >
-                <option value="newsletter">Newsletter</option>
-                <option value="promotion">Promotional</option>
-                <option value="welcome">Welcome Series</option>
-                <option value="transactional">Transactional</option>
-                <option value="announcement">Announcement</option>
+                <option value="Newsletter">Newsletter</option>
+                <option value="Promotional">Promotional</option>
+                <option value="Welcome Series">Welcome Series</option>
+                <option value="Transactional">Transactional</option>
+                <option value="Announcement">Announcement</option>
               </select>
             </div>
           </div>

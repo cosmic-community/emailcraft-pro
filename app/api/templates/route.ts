@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       template_name,
       subject_line,
       html_content,
-      template_category: template_category || 'newsletter',
+      template_category: template_category || 'Newsletter',
       template_description: template_description || ''
     })
 
@@ -51,6 +51,18 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error creating template:', error)
+    
+    // Return more detailed error information if available
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: error.message
+        },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
       { 
         success: false,
