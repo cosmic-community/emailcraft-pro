@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
       template_name,
       subject_line,
       html_content,
-      template_category: template_category || 'Newsletter',
-      template_description: template_description || ''
+      template_category,
+      template_description
     })
 
     return NextResponse.json({
