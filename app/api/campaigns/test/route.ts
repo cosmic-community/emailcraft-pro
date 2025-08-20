@@ -41,7 +41,8 @@ export async function POST(request: NextRequest) {
     if (!process.env.RESEND_API_KEY) {
       return NextResponse.json(
         { 
-          error: 'Email service not configured. Please add RESEND_API_KEY to environment variables.' 
+          error: 'Email service not configured. Please add RESEND_API_KEY to environment variables.',
+          logs: ['RESEND_API_KEY environment variable is missing']
         },
         { status: 500 }
       )
@@ -55,7 +56,10 @@ export async function POST(request: NextRequest) {
     
     if (!campaign) {
       return NextResponse.json(
-        { error: 'Campaign not found' },
+        { 
+          error: 'Campaign not found',
+          logs: [`Campaign with ID ${campaignId} not found in Cosmic CMS`]
+        },
         { status: 404 }
       )
     }
@@ -65,20 +69,29 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       return NextResponse.json(
-        { error: result.error },
+        { 
+          error: result.error,
+          logs: result.logs
+        },
         { status: 400 }
       )
     }
 
     return NextResponse.json({
       success: true,
-      message: `Test email sent successfully to ${testEmail}`
+      message: `Test email sent successfully to ${testEmail}`,
+      logs: result.logs
     })
 
   } catch (error) {
     console.error('Error in test email API:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        logs: [`API Error: ${errorMessage}`],
+        details: error instanceof Error ? error.stack : undefined
+      },
       { status: 500 }
     )
   }
