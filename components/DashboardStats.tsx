@@ -38,16 +38,16 @@ export default function DashboardStats({ stats }: DashboardStatsProps) {
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
       {statItems.map((item) => (
-        <div key={item.title} className="card p-6">
-          <div className="flex items-center">
-            <div className={`p-2 rounded-lg bg-gray-50 ${item.color}`}>
-              <item.icon className="h-6 w-6" />
+        <div key={item.title} className="card p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center">
+            <div className={`p-2 rounded-lg bg-gray-50 ${item.color} mb-2 sm:mb-0 self-start`}>
+              <item.icon className="h-4 w-4 sm:h-6 sm:w-6" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">{item.title}</p>
-              <p className="text-2xl font-bold text-gray-900">{item.value}</p>
+            <div className="sm:ml-4">
+              <p className="text-xs sm:text-sm font-medium text-gray-600">{item.title}</p>
+              <p className="text-lg sm:text-2xl font-bold text-gray-900">{item.value}</p>
             </div>
           </div>
         </div>

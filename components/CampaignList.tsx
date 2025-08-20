@@ -105,7 +105,7 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
 
   if (campaigns.length === 0) {
     return (
-      <div className="card p-8 text-center">
+      <div className="card p-6 sm:p-8 text-center">
         <Mail className="h-12 w-12 text-gray-400 mx-auto mb-4" />
         <p className="text-gray-500">No campaigns yet. Create your first campaign to get started!</p>
       </div>
@@ -114,7 +114,7 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         {campaigns.map((campaign) => {
           const statusValue = getStatusValue(campaign)
           const statusKey = getStatusKey(campaign)
@@ -123,65 +123,67 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
           return (
             <div 
               key={campaign.id} 
-              className="card p-6 cursor-pointer hover:shadow-lg transition-shadow duration-200"
+              className="card p-4 sm:p-6 cursor-pointer hover:shadow-lg transition-shadow duration-200"
               onClick={() => handleCampaignClick(campaign)}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4">
+                <div className="flex-1 mb-3 sm:mb-0">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
                     {campaign.metadata.campaign_name}
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xs sm:text-sm text-gray-600">
                     Template: {campaign.metadata.email_template?.metadata?.template_name || 'No template selected'}
                   </p>
                 </div>
                 
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>
                     {statusValue}
                   </span>
                   
-                  {statusKey === 'draft' && campaign.metadata.email_template && (
+                  <div className="flex gap-1 sm:gap-2">
+                    {statusKey === 'draft' && campaign.metadata.email_template && (
+                      <button
+                        onClick={(e) => handleSendClick(e, campaign)}
+                        className="inline-flex items-center px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                      >
+                        <Send className="h-3 w-3 mr-1" />
+                        <span className="hidden sm:inline">Send</span>
+                      </button>
+                    )}
+                    
                     <button
-                      onClick={(e) => handleSendClick(e, campaign)}
-                      className="inline-flex items-center px-3 py-1 rounded-md text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                      onClick={(e) => handleEditClick(e, campaign)}
+                      className="inline-flex items-center px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm bg-gray-600 text-white hover:bg-gray-700 transition-colors"
                     >
-                      <Send className="h-3 w-3 mr-1" />
-                      Send
+                      <Edit className="h-3 w-3 mr-1" />
+                      <span className="hidden sm:inline">Edit</span>
                     </button>
-                  )}
-                  
-                  <button
-                    onClick={(e) => handleEditClick(e, campaign)}
-                    className="inline-flex items-center px-3 py-1 rounded-md text-sm bg-gray-600 text-white hover:bg-gray-700 transition-colors"
-                  >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Edit
-                  </button>
 
-                  {statusKey === 'sent' && (
-                    <button
-                      onClick={(e) => handleDuplicateClick(e, campaign)}
-                      className="inline-flex items-center px-3 py-1 rounded-md text-sm bg-green-600 text-white hover:bg-green-700 transition-colors"
-                    >
-                      <Copy className="h-3 w-3 mr-1" />
-                      Duplicate
-                    </button>
-                  )}
+                    {statusKey === 'sent' && (
+                      <button
+                        onClick={(e) => handleDuplicateClick(e, campaign)}
+                        className="inline-flex items-center px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm bg-green-600 text-white hover:bg-green-700 transition-colors"
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        <span className="hidden sm:inline">Duplicate</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 mb-4">
                 {campaign.metadata.send_date && (
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Calendar className="h-4 w-4 mr-2" />
+                  <div className="flex items-center text-xs sm:text-sm text-gray-600">
+                    <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                     <span>{new Date(campaign.metadata.send_date).toLocaleDateString()}</span>
                   </div>
                 )}
                 
                 {campaign.metadata.campaign_stats && (
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Users className="h-4 w-4 mr-2" />
+                  <div className="flex items-center text-xs sm:text-sm text-gray-600">
+                    <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                     <span>{campaign.metadata.campaign_stats.recipients} recipients</span>
                   </div>
                 )}
@@ -189,21 +191,21 @@ export default function CampaignList({ campaigns: initialCampaigns }: CampaignLi
               
               {campaign.metadata.campaign_stats && campaign.metadata.campaign_stats.open_rate > 0 && (
                 <div className="border-t border-gray-200 pt-4">
-                  <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
                     <div>
-                      <p className="text-lg font-semibold text-gray-900">
+                      <p className="text-sm sm:text-lg font-semibold text-gray-900">
                         {Math.round(campaign.metadata.campaign_stats.open_rate * 100)}%
                       </p>
                       <p className="text-xs text-gray-500">Open Rate</p>
                     </div>
                     <div>
-                      <p className="text-lg font-semibold text-gray-900">
+                      <p className="text-sm sm:text-lg font-semibold text-gray-900">
                         {Math.round(campaign.metadata.campaign_stats.click_rate * 100)}%
                       </p>
                       <p className="text-xs text-gray-500">Click Rate</p>
                     </div>
                     <div>
-                      <p className="text-lg font-semibold text-gray-900">
+                      <p className="text-sm sm:text-lg font-semibold text-gray-900">
                         {campaign.metadata.campaign_stats.delivered}
                       </p>
                       <p className="text-xs text-gray-500">Delivered</p>

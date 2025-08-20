@@ -23,7 +23,8 @@ export default function RootLayout({
       <body className={inter.className}>
         <div className="flex h-screen bg-gray-50">
           <Sidebar />
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1 overflow-y-auto lg:ml-0">
+            <div className="lg:hidden h-16" /> {/* Space for mobile menu button */}
             {children}
           </main>
         </div>

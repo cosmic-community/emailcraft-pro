@@ -114,17 +114,18 @@ export default function CreateCampaignForm({ templates, preSelectedTemplateId }:
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="btn btn-primary flex items-center"
+        className="btn btn-primary flex items-center text-sm sm:text-base"
       >
         <Plus className="h-4 w-4 mr-2" />
-        Create Campaign
+        <span className="hidden sm:inline">Create Campaign</span>
+        <span className="sm:hidden">Create</span>
       </button>
     )
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-screen overflow-y-auto">
+      <div className="bg-white rounded-lg max-w-2xl w-full p-4 sm:p-6 max-h-screen overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Create Email Campaign</h2>
           <button
@@ -184,7 +185,7 @@ export default function CreateCampaignForm({ templates, preSelectedTemplateId }:
               <Tag className="h-4 w-4 mr-1" />
               Target Tags
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {tagOptions.map((tag) => (
                 <label
                   key={tag}
@@ -237,7 +238,7 @@ export default function CreateCampaignForm({ templates, preSelectedTemplateId }:
             />
           </div>
 
-          <div className="flex space-x-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <button
               type="button"
               onClick={handleClose}

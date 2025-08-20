@@ -35,20 +35,20 @@ export default function QuickActions() {
 
   return (
     <div className="card">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+      <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900">Quick Actions</h2>
       </div>
       
-      <div className="p-6 space-y-3">
+      <div className="p-4 sm:p-6 space-y-2 sm:space-y-3">
         {actions.map((action) => (
           <Link
             key={action.title}
             href={action.href}
             className={`flex items-center p-3 rounded-lg text-white transition-colors ${action.color}`}
           >
-            <action.icon className="h-5 w-5 mr-3" />
+            <action.icon className="h-4 w-4 sm:h-5 sm:w-5 mr-3 flex-shrink-0" />
             <div>
-              <div className="font-medium">{action.title}</div>
+              <div className="font-medium text-sm sm:text-base">{action.title}</div>
               <div className="text-xs opacity-90">{action.description}</div>
             </div>
           </Link>
