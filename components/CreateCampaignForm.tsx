@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { EmailTemplate } from '@/types'
-import { Plus, X, Calendar, Tag } from 'lucide-react'
-import ContactSelector from './ContactSelector'
+import { Plus, X, Calendar, Tag, AlertCircle } from 'lucide-react'
 
 interface CreateCampaignFormProps {
   templates: EmailTemplate[]
@@ -22,6 +21,7 @@ const tagOptions = [
 export default function CreateCampaignForm({ templates, preSelectedTemplateId }: CreateCampaignFormProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     campaign_name: '',
     email_template: preSelectedTemplateId || '',
@@ -49,8 +49,11 @@ export default function CreateCampaignForm({ templates, preSelectedTemplateId }:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError(null)
 
     try {
+      console.log('Submitting campaign data:', formData)
+      
       const response = await fetch('/api/campaigns', {
         method: 'POST',
         headers: {
@@ -59,12 +62,16 @@ export default function CreateCampaignForm({ templates, preSelectedTemplateId }:
         body: JSON.stringify(formData),
       })
 
+      const result = await response.json()
+      console.log('Campaign creation response:', result)
+
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create campaign')
+        throw new Error(result.error || `HTTP error! status: ${response.status}`)
       }
 
-      const result = await response.json()
+      if (!result.success) {
+        throw new Error(result.error || 'Campaign creation failed')
+      }
       
       // Reset form and close modal
       setFormData({
@@ -76,12 +83,14 @@ export default function CreateCampaignForm({ templates, preSelectedTemplateId }:
         campaign_notes: ''
       })
       setIsOpen(false)
+      setError(null)
       
       // Refresh the page to show new campaign
       window.location.reload()
     } catch (error) {
       console.error('Error creating campaign:', error)
-      alert(error instanceof Error ? error.message : 'Failed to create campaign. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create campaign. Please try again.'
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -94,6 +103,11 @@ export default function CreateCampaignForm({ templates, preSelectedTemplateId }:
         ? prev.target_tags.filter(t => t !== tag)
         : [...prev.target_tags, tag]
     }))
+  }
+
+  const handleClose = () => {
+    setIsOpen(false)
+    setError(null)
   }
 
   if (!isOpen) {
@@ -114,12 +128,22 @@ export default function CreateCampaignForm({ templates, preSelectedTemplateId }:
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Create Email Campaign</h2>
           <button
-            onClick={() => setIsOpen(false)}
+            onClick={handleClose}
             className="text-gray-400 hover:text-gray-600"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start">
+            <AlertCircle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-red-700 text-sm font-medium">Error creating campaign:</p>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -216,7 +240,7 @@ export default function CreateCampaignForm({ templates, preSelectedTemplateId }:
           <div className="flex space-x-3 pt-4">
             <button
               type="button"
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
               className="flex-1 btn btn-secondary"
             >
               Cancel

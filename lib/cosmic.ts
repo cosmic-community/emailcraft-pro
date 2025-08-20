@@ -153,39 +153,53 @@ export async function getCampaignById(id: string): Promise<Campaign | null> {
 }
 
 export async function createCampaign(data: CreateCampaignFormData | any): Promise<Campaign> {
-  // Get the email template to include in the campaign
-  const template = await getEmailTemplateById(data.email_template)
-  if (!template) {
-    throw new Error('Email template not found')
-  }
+  console.log('Creating campaign with data:', JSON.stringify(data, null, 2))
+  
+  try {
+    // Get the email template to validate it exists
+    const template = await getEmailTemplateById(data.email_template)
+    if (!template) {
+      throw new Error(`Email template with ID ${data.email_template} not found`)
+    }
+    console.log('Found template:', template.id, template.metadata.template_name)
 
-  // Create campaign data matching the exact Cosmic CMS object type structure
-  const campaignData = {
-    title: data.campaign_name,
-    type: 'campaigns',
-    metadata: {
-      campaign_name: data.campaign_name,
-      email_template: template.id, // Store template ID, Cosmic will populate the relationship
-      campaign_status: {
-        key: getCampaignStatusKey(data.campaign_status || 'draft'),
-        value: data.campaign_status || 'Draft'
-      },
-      target_tags: data.target_tags || null,
-      send_date: data.send_date || '',
-      campaign_notes: data.campaign_notes || '',
-      campaign_stats: {
-        recipients: 0,
-        delivered: 0,
-        opened: 0,
-        clicked: 0,
-        open_rate: 0,
-        click_rate: 0
+    // Create campaign data matching the exact Cosmic CMS object type structure
+    // For object-type metafields, Cosmic expects just the object ID as a string
+    const campaignData = {
+      title: data.campaign_name,
+      type: 'campaigns',
+      metadata: {
+        campaign_name: data.campaign_name,
+        email_template: data.email_template, // Just the template ID as string
+        campaign_status: {
+          key: getCampaignStatusKey(data.campaign_status || 'draft'),
+          value: getCampaignStatusValue(data.campaign_status || 'draft')
+        },
+        target_tags: data.target_tags && data.target_tags.length > 0 ? data.target_tags : null,
+        send_date: data.send_date || '',
+        campaign_notes: data.campaign_notes || '',
+        campaign_stats: {
+          recipients: 0,
+          delivered: 0,
+          opened: 0,
+          clicked: 0,
+          open_rate: 0,
+          click_rate: 0
+        }
       }
     }
-  }
 
-  const response = await cosmic.objects.insertOne(campaignData)
-  return response.object as Campaign
+    console.log('Sending campaign data to Cosmic:', JSON.stringify(campaignData, null, 2))
+
+    const response = await cosmic.objects.insertOne(campaignData)
+    console.log('Campaign created successfully:', response.object.id)
+    
+    return response.object as Campaign
+    
+  } catch (error) {
+    console.error('Error in createCampaign function:', error)
+    throw error
+  }
 }
 
 function getCampaignStatusKey(statusValue: string): CampaignStatusKey {
@@ -202,6 +216,22 @@ function getCampaignStatusKey(statusValue: string): CampaignStatusKey {
     'paused': 'paused'
   }
   return statusMap[statusValue] || 'draft'
+}
+
+function getCampaignStatusValue(statusKey: string): CampaignStatusValue {
+  const statusMap: Record<string, CampaignStatusValue> = {
+    'draft': 'Draft',
+    'scheduled': 'Scheduled',
+    'sending': 'Sending',
+    'sent': 'Sent',
+    'paused': 'Paused',
+    'Draft': 'Draft',
+    'Scheduled': 'Scheduled',
+    'Sending': 'Sending',
+    'Sent': 'Sent',
+    'Paused': 'Paused'
+  }
+  return statusMap[statusKey] || 'Draft'
 }
 
 export async function updateCampaign(id: string, updates: Partial<Campaign['metadata']>): Promise<Campaign> {
