@@ -1,112 +1,173 @@
 'use client'
 
-import { useState } from 'react'
-import { EmailTemplate } from '@/types'
-import { FileText, Copy } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Edit, Eye, Trash2 } from 'lucide-react'
+import type { EmailTemplate } from '@/types'
 import TemplatePreviewModal from './TemplatePreviewModal'
+import EditTemplateModal from './EditTemplateModal'
 
-interface TemplateGridProps {
-  templates: EmailTemplate[]
-}
-
-export default function TemplateGrid({ templates }: TemplateGridProps) {
+export default function TemplateGrid() {
+  const [templates, setTemplates] = useState<EmailTemplate[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null)
-  const [showPreview, setShowPreview] = useState(false)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
 
-  const handlePreview = (e: React.MouseEvent, template: EmailTemplate) => {
-    e.stopPropagation()
+  const fetchTemplates = async () => {
+    try {
+      const response = await fetch('/api/templates')
+      if (response.ok) {
+        const data = await response.json()
+        setTemplates(data.templates || [])
+      }
+    } catch (error) {
+      console.error('Error fetching templates:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchTemplates()
+  }, [])
+
+  const handlePreview = (template: EmailTemplate) => {
     setSelectedTemplate(template)
-    setShowPreview(true)
+    setIsPreviewOpen(true)
   }
 
-  const handleUseTemplate = (e: React.MouseEvent, template: EmailTemplate) => {
-    e.stopPropagation()
-    // Redirect to campaigns page with template pre-selected
-    const params = new URLSearchParams()
-    params.set('template', template.id)
-    window.location.href = `/campaigns?${params.toString()}`
+  const handleEdit = (template: EmailTemplate) => {
+    setSelectedTemplate(template)
+    setIsEditOpen(true)
   }
 
-  const closePreview = () => {
-    setSelectedTemplate(null)
-    setShowPreview(false)
+  const handleDelete = async (templateId: string) => {
+    if (!confirm('Are you sure you want to delete this template?')) return
+
+    try {
+      const response = await fetch(`/api/templates/${templateId}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        setTemplates(templates.filter(t => t.id !== templateId))
+      } else {
+        throw new Error('Failed to delete template')
+      }
+    } catch (error) {
+      console.error('Error deleting template:', error)
+      alert('Failed to delete template. Please try again.')
+    }
+  }
+
+  const handleSaveComplete = () => {
+    fetchTemplates() // Refresh the templates list
+  }
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="animate-pulse bg-gray-200 rounded-lg h-48" />
+        ))}
+      </div>
+    )
   }
 
   if (templates.length === 0) {
     return (
-      <div className="card p-6 sm:p-8 text-center">
-        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500">No templates yet. Create your first template to get started!</p>
+      <div className="text-center py-12">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No templates yet</h3>
+        <p className="text-gray-500">Create your first email template to get started.</p>
       </div>
     )
   }
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {templates.map((template) => (
-          <div key={template.id} className="card overflow-hidden">
-            {template.metadata.preview_image?.imgix_url ? (
-              <img
-                src={`${template.metadata.preview_image.imgix_url}?w=800&h=400&fit=crop&auto=format,compress`}
-                alt={template.metadata.template_name}
-                className="w-full h-32 sm:h-48 object-cover"
-              />
-            ) : (
-              <div className="w-full h-32 sm:h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                <FileText className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
-              </div>
-            )}
-            
-            <div className="p-4 sm:p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
-                    {template.metadata.template_name}
-                  </h3>
-                  
-                  <p className="text-xs sm:text-sm text-gray-600 mb-2">
-                    📧 {template.metadata.subject_line}
-                  </p>
-                  
-                  {template.metadata.template_description && (
-                    <p className="text-xs text-gray-500 mb-3 line-clamp-2">
-                      {template.metadata.template_description}
-                    </p>
-                  )}
-                  
-                  {template.metadata.template_category && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {template.metadata.template_category.value || template.metadata.template_category}
-                    </span>
-                  )}
+          <div key={template.id} className="bg-white rounded-lg shadow border hover:shadow-md transition-shadow">
+            <div className="p-4">
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="font-medium text-gray-900 line-clamp-2">
+                  {template.metadata.template_name}
+                </h3>
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => handlePreview(template)}
+                    className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    title="Preview template"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleEdit(template)}
+                    className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                    title="Edit template"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(template.id)}
+                    className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                    title="Delete template"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
               
-              <div className="mt-4 flex flex-col sm:flex-row gap-2">
-                <button 
-                  onClick={(e) => handlePreview(e, template)}
-                  className="flex-1 btn btn-primary text-sm"
-                >
-                  Preview
-                </button>
-                <button 
-                  onClick={(e) => handleUseTemplate(e, template)}
-                  className="flex-1 sm:flex-none btn btn-secondary text-sm"
-                >
-                  Use Template
-                </button>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p><strong>Subject:</strong> {template.metadata.subject_line}</p>
+                {template.metadata.template_category && (
+                  <p><strong>Category:</strong> {
+                    typeof template.metadata.template_category === 'object' 
+                      ? template.metadata.template_category.value 
+                      : template.metadata.template_category
+                  }</p>
+                )}
+                {template.metadata.template_description && (
+                  <p className="line-clamp-2">{template.metadata.template_description}</p>
+                )}
               </div>
             </div>
+            
+            {template.metadata.preview_image && (
+              <div className="px-4 pb-4">
+                <img
+                  src={`${template.metadata.preview_image.imgix_url}?w=400&h=200&fit=crop&auto=format,compress`}
+                  alt="Template preview"
+                  className="w-full h-32 object-cover rounded border"
+                />
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      {selectedTemplate && showPreview && (
+      {/* Preview Modal */}
+      {selectedTemplate && (
         <TemplatePreviewModal
           template={selectedTemplate}
-          onClose={closePreview}
-          onUseTemplate={() => handleUseTemplate({ stopPropagation: () => {} } as any, selectedTemplate)}
+          isOpen={isPreviewOpen}
+          onClose={() => {
+            setIsPreviewOpen(false)
+            setSelectedTemplate(null)
+          }}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {selectedTemplate && (
+        <EditTemplateModal
+          template={selectedTemplate}
+          isOpen={isEditOpen}
+          onClose={() => {
+            setIsEditOpen(false)
+            setSelectedTemplate(null)
+          }}
+          onSave={handleSaveComplete}
         />
       )}
     </>

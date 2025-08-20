@@ -1,30 +1,55 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Plus, X, Zap, Upload, Image as ImageIcon } from 'lucide-react'
+import { X, Zap, Upload, Save } from 'lucide-react'
 import HtmlPreviewTabs from './HtmlPreviewTabs'
+import type { EmailTemplate } from '@/types'
 
 interface UploadedImage {
   url: string;
   name: string;
 }
 
-export default function CreateTemplateForm() {
-  const [isOpen, setIsOpen] = useState(false)
+interface EditTemplateModalProps {
+  template: EmailTemplate;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: () => void;
+}
+
+export default function EditTemplateModal({ 
+  template, 
+  isOpen, 
+  onClose, 
+  onSave 
+}: EditTemplateModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
-  const textareaRef = useRef<HTMLTextAreaArea>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [formData, setFormData] = useState({
-    template_name: '',
-    subject_line: '',
-    html_content: '',
-    template_category: 'Newsletter' as const,
-    template_description: '',
-    ai_prompt: ''
+    template_name: template.metadata.template_name || '',
+    subject_line: template.metadata.subject_line || '',
+    html_content: template.metadata.html_content || '',
+    template_category: template.metadata.template_category?.key || 'newsletter' as const,
+    template_description: template.metadata.template_description || '',
+    ai_edit_prompt: ''
   })
+
+  // Reset form data when template changes
+  useEffect(() => {
+    setFormData({
+      template_name: template.metadata.template_name || '',
+      subject_line: template.metadata.subject_line || '',
+      html_content: template.metadata.html_content || '',
+      template_category: template.metadata.template_category?.key || 'newsletter' as const,
+      template_description: template.metadata.template_description || '',
+      ai_edit_prompt: ''
+    })
+    setUploadedImages([])
+  }, [template])
 
   // Auto-resize textarea function
   const autoResizeTextarea = (textarea: HTMLTextAreaElement) => {
@@ -34,7 +59,7 @@ export default function CreateTemplateForm() {
 
   // Handle AI prompt change with auto-resize
   const handleAIPromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setFormData(prev => ({ ...prev, ai_prompt: e.target.value }))
+    setFormData(prev => ({ ...prev, ai_edit_prompt: e.target.value }))
     autoResizeTextarea(e.target)
   }
 
@@ -43,7 +68,7 @@ export default function CreateTemplateForm() {
     if (textareaRef.current) {
       autoResizeTextarea(textareaRef.current)
     }
-  }, [formData.ai_prompt])
+  }, [formData.ai_edit_prompt])
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -66,12 +91,12 @@ export default function CreateTemplateForm() {
           continue
         }
 
-        const formData = new FormData()
-        formData.append('file', file)
+        const uploadFormData = new FormData()
+        uploadFormData.append('file', file)
 
         const response = await fetch('/api/upload', {
           method: 'POST',
-          body: formData,
+          body: uploadFormData,
         })
 
         if (!response.ok) {
@@ -114,8 +139,8 @@ export default function CreateTemplateForm() {
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/templates', {
-        method: 'POST',
+      const response = await fetch(`/api/templates/${template.id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -130,55 +155,42 @@ export default function CreateTemplateForm() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create template')
+        throw new Error(errorData.error || 'Failed to update template')
       }
 
-      const result = await response.json()
-      
-      // Reset form and close modal
-      setFormData({
-        template_name: '',
-        subject_line: '',
-        html_content: '',
-        template_category: 'Newsletter',
-        template_description: '',
-        ai_prompt: ''
-      })
-      setUploadedImages([])
-      setIsOpen(false)
-      
-      // Refresh the page to show new template
-      window.location.reload()
+      onSave()
+      onClose()
     } catch (error) {
-      console.error('Error creating template:', error)
-      alert(error instanceof Error ? error.message : 'Failed to create template. Please try again.')
+      console.error('Error updating template:', error)
+      alert(error instanceof Error ? error.message : 'Failed to update template. Please try again.')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleAIGenerate = async () => {
-    if (!formData.ai_prompt.trim()) {
-      alert('Please enter a prompt for AI generation')
+  const handleAIEdit = async () => {
+    if (!formData.ai_edit_prompt.trim()) {
+      alert('Please enter instructions for AI editing')
       return
     }
 
     setIsGenerating(true)
     try {
-      const response = await fetch('/api/templates/generate', {
+      const response = await fetch(`/api/templates/${template.id}/edit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          prompt: formData.ai_prompt,
+          prompt: formData.ai_edit_prompt,
+          currentHtml: formData.html_content,
           images: uploadedImages.map(img => img.url)
         }),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to generate template')
+        throw new Error(errorData.error || 'Failed to edit template with AI')
       }
 
       const { html } = await response.json()
@@ -186,36 +198,25 @@ export default function CreateTemplateForm() {
       setFormData(prev => ({ 
         ...prev, 
         html_content: html,
-        template_name: prev.template_name || 'AI Generated Template',
-        subject_line: prev.subject_line || 'Generated Email Template'
+        ai_edit_prompt: ''
       }))
     } catch (error) {
-      console.error('Error generating template:', error)
-      alert(error instanceof Error ? error.message : 'Failed to generate template. Please try again.')
+      console.error('Error editing template with AI:', error)
+      alert(error instanceof Error ? error.message : 'Failed to edit template with AI. Please try again.')
     } finally {
       setIsGenerating(false)
     }
   }
 
-  if (!isOpen) {
-    return (
-      <button
-        onClick={() => setIsOpen(true)}
-        className="btn btn-primary flex items-center"
-      >
-        <Plus className="h-4 w-4 mr-2" />
-        Create Template
-      </button>
-    )
-  }
+  if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-screen overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Create Email Template</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Edit Template</h2>
           <button
-            onClick={() => setIsOpen(false)}
+            onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
           >
             <X className="h-5 w-5" />
@@ -250,11 +251,11 @@ export default function CreateTemplateForm() {
                 }))}
                 className="input"
               >
-                <option value="Newsletter">Newsletter</option>
-                <option value="Promotional">Promotional</option>
-                <option value="Welcome Series">Welcome Series</option>
-                <option value="Transactional">Transactional</option>
-                <option value="Announcement">Announcement</option>
+                <option value="newsletter">Newsletter</option>
+                <option value="promotion">Promotional</option>
+                <option value="welcome">Welcome Series</option>
+                <option value="transactional">Transactional</option>
+                <option value="announcement">Announcement</option>
               </select>
             </div>
           </div>
@@ -274,23 +275,23 @@ export default function CreateTemplateForm() {
             />
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-blue-900 mb-3 flex items-center">
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-purple-900 mb-3 flex items-center">
               <Zap className="h-4 w-4 mr-2" />
-              AI Template Generator
+              AI Template Editor
             </h3>
             
             {/* Image Upload Section */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-2">
-                <label className="text-sm font-medium text-blue-800">
+                <label className="text-sm font-medium text-purple-800">
                   Upload Images (optional)
                 </label>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
-                  className="flex items-center gap-1 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-md text-sm disabled:opacity-50"
+                  className="flex items-center gap-1 px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-md text-sm disabled:opacity-50"
                 >
                   <Upload className="h-3 w-3" />
                   {isUploading ? 'Uploading...' : 'Upload'}
@@ -334,28 +335,28 @@ export default function CreateTemplateForm() {
                 </div>
               )}
               
-              <p className="text-xs text-blue-600">
-                Upload images to include in your AI-generated template. Max 5MB per image.
+              <p className="text-xs text-purple-600">
+                Upload images to include in your edited template. Max 5MB per image.
               </p>
             </div>
 
             <div className="space-y-2">
               <textarea
                 ref={textareaRef}
-                value={formData.ai_prompt}
+                value={formData.ai_edit_prompt}
                 onChange={handleAIPromptChange}
-                placeholder="Describe the email template you want (e.g., 'professional newsletter with product highlights and modern design')"
+                placeholder="Describe the changes you want (e.g., 'add a hero section with the uploaded image', 'make the design more modern', 'add a call-to-action button')"
                 className="w-full input resize-none overflow-hidden min-h-[2.5rem]"
                 style={{ maxHeight: '200px' }}
                 rows={1}
               />
               <button
                 type="button"
-                onClick={handleAIGenerate}
+                onClick={handleAIEdit}
                 disabled={isGenerating}
                 className="btn btn-primary whitespace-nowrap disabled:opacity-50"
               >
-                {isGenerating ? 'Generating...' : 'Generate Template'}
+                {isGenerating ? 'Editing...' : 'Edit with AI'}
               </button>
             </div>
           </div>
@@ -387,7 +388,7 @@ export default function CreateTemplateForm() {
           <div className="flex space-x-3 pt-4">
             <button
               type="button"
-              onClick={() => setIsOpen(false)}
+              onClick={onClose}
               className="flex-1 btn btn-secondary"
             >
               Cancel
@@ -395,9 +396,10 @@ export default function CreateTemplateForm() {
             <button
               type="submit"
               disabled={isLoading}
-              className="flex-1 btn btn-primary disabled:opacity-50"
+              className="flex-1 btn btn-primary disabled:opacity-50 flex items-center justify-center"
             >
-              {isLoading ? 'Creating...' : 'Create Template'}
+              <Save className="h-4 w-4 mr-2" />
+              {isLoading ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>

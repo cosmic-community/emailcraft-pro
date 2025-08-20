@@ -10,7 +10,7 @@ const cosmic = createBucketClient({
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt } = await request.json()
+    const { prompt, images = [] } = await request.json()
 
     if (!prompt || typeof prompt !== 'string') {
       return NextResponse.json(
@@ -19,12 +19,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Build AI prompt with image context if images are provided
+    let aiPrompt = `Create a professional HTML email template with the following requirements: ${prompt}. 
+    Include inline CSS styles, proper email HTML structure, header, main content area, footer.
+    Make it responsive and compatible with email clients. Use modern design principles.`
+
+    if (images.length > 0) {
+      aiPrompt += `\n\nInclude the following uploaded images in the template design:\n${images.map((url: string, index: number) => `${index + 1}. ${url}`).join('\n')}
+      Use appropriate HTML img tags with these URLs and ensure they are optimized for email clients with proper max-width and responsive styling.`
+    }
+
+    aiPrompt += '\n\nReturn only the HTML code without any explanatory text. No backticks or code block formatting.'
+
     const response = await cosmic.ai.generateText({
-      prompt: `Create a professional HTML email template with the following requirements: ${prompt}. 
-      Include inline CSS styles, proper email HTML structure, header, main content area, footer.
-      Make it responsive and compatible with email clients. Use modern design principles.
-      Return only the HTML code without any explanatory text. No backticks.`,
-      max_tokens: 10000
+      prompt: aiPrompt,
+      max_tokens: 12000
     })
 
     return NextResponse.json({ html: response.text })
