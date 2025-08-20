@@ -15,7 +15,7 @@ export default function CreateTemplateForm() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
-  const textareaRef = useRef<HTMLTextAreaArea>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [formData, setFormData] = useState({
     template_name: '',

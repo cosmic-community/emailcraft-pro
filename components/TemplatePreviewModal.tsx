@@ -6,11 +6,19 @@ import { X, Eye, Copy } from 'lucide-react'
 
 interface TemplatePreviewModalProps {
   template: EmailTemplate
+  isOpen: boolean
   onClose: () => void
-  onUseTemplate: () => void
 }
 
-export default function TemplatePreviewModal({ template, onClose, onUseTemplate }: TemplatePreviewModalProps) {
+export default function TemplatePreviewModal({ template, isOpen, onClose }: TemplatePreviewModalProps) {
+  if (!isOpen) return null
+
+  const handleUseTemplate = () => {
+    // This could navigate to create campaign with this template
+    // For now, just close the modal
+    onClose()
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-4xl w-full h-[80vh] flex flex-col">
@@ -25,7 +33,7 @@ export default function TemplatePreviewModal({ template, onClose, onUseTemplate 
           </div>
           <div className="flex items-center space-x-3">
             <button
-              onClick={onUseTemplate}
+              onClick={handleUseTemplate}
               className="btn btn-primary"
             >
               Use Template

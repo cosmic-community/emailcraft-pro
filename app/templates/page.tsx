@@ -22,7 +22,7 @@ export default async function TemplatesPage() {
         </div>
       </div>
 
-      <TemplateGrid templates={templates} />
+      <TemplateGrid />
     </div>
   )
 }
