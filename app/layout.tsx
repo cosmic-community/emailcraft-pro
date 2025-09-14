@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import Sidebar from '@/components/Sidebar'
+import Footer from '@/components/Footer'
 import CosmicBadge from '@/components/CosmicBadge'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -23,9 +24,12 @@ export default function RootLayout({
       <body className={inter.className}>
         <div className="flex h-screen bg-gray-50">
           <Sidebar />
-          <main className="flex-1 overflow-y-auto lg:ml-0">
+          <main className="flex-1 overflow-y-auto lg:ml-0 flex flex-col">
             <div className="lg:hidden h-16" /> {/* Space for mobile menu button */}
-            {children}
+            <div className="flex-1">
+              {children}
+            </div>
+            <Footer />
           </main>
         </div>
         <CosmicBadge bucketSlug={bucketSlug} />
