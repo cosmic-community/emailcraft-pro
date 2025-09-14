@@ -1,46 +1,88 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createBucketClient } from '@cosmicjs/sdk'
-
-const cosmic = createBucketClient({
-  bucketSlug: process.env.COSMIC_BUCKET_SLUG as string,
-  readKey: process.env.COSMIC_READ_KEY as string,
-  writeKey: process.env.COSMIC_WRITE_KEY as string,
-  apiEnvironment: 'staging'
-})
+import { cosmic } from '@/lib/cosmic'
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, images = [] } = await request.json()
+    const body = await request.json()
 
-    if (!prompt || typeof prompt !== 'string') {
+    if (!body.prompt) {
       return NextResponse.json(
-        { error: 'Prompt is required and must be a string' },
+        { error: 'Prompt is required' },
         { status: 400 }
       )
     }
 
-    // Build AI prompt with image context if images are provided
-    let aiPrompt = `Create a professional HTML email template with the following requirements: ${prompt}. 
-    Include inline CSS styles, proper email HTML structure, header, main content area, footer.
-    Make it responsive and compatible with email clients. Use modern design principles.`
+    const templateType = body.template_type || 'Newsletter'
 
-    if (images.length > 0) {
-      aiPrompt += `\n\nInclude the following uploaded images in the template design:\n${images.map((url: string, index: number) => `${index + 1}. ${url}`).join('\n')}
-      Use appropriate HTML img tags with these URLs and ensure they are optimized for email clients with proper max-width and responsive styling.`
-    }
+    // Create a detailed prompt for AI generation
+    const detailedPrompt = `Create a professional HTML email template for a ${templateType.toLowerCase()}. 
 
-    aiPrompt += '\n\nReturn only the HTML code without any explanatory text. No backticks or code block formatting.'
+User request: ${body.prompt}
 
-    const response = await cosmic.ai.generateText({
-      prompt: aiPrompt,
-      max_tokens: 12000
+Please generate:
+1. A complete HTML email template with inline CSS styling
+2. Use a maximum width of 600px with proper responsive design
+3. Include placeholder variables like {{first_name}}, {{company_name}} where appropriate
+4. Use professional styling with good color contrast and typography
+5. Make it mobile-friendly
+6. Include proper email-safe HTML structure
+
+The template should be production-ready and follow email marketing best practices.`
+
+    // Generate content using Cosmic AI
+    const aiResponse = await cosmic.ai.generateText({
+      prompt: detailedPrompt,
+      max_tokens: 2000
     })
 
-    return NextResponse.json({ html: response.text })
+    if (!aiResponse.text) {
+      throw new Error('No content generated from AI')
+    }
+
+    // Extract HTML content from AI response
+    let content = aiResponse.text.trim()
+
+    // Clean up the response if it includes markdown code blocks
+    if (content.includes('```html')) {
+      const htmlMatch = content.match(/```html\n([\s\S]*?)\n```/)
+      if (htmlMatch && htmlMatch[1]) {
+        content = htmlMatch[1].trim()
+      }
+    } else if (content.includes('```')) {
+      // Handle generic code blocks
+      const codeMatch = content.match(/```\n([\s\S]*?)\n```/)
+      if (codeMatch && codeMatch[1]) {
+        content = codeMatch[1].trim()
+      }
+    }
+
+    // Try to extract subject and name from AI response
+    let subject = ''
+    let name = ''
+
+    // Look for subject line patterns in the response
+    const subjectMatch = content.match(/subject:\s*(.+)/i) ||
+      content.match(/subject line:\s*(.+)/i) ||
+      content.match(/<title>(.+)<\/title>/i)
+
+    if (subjectMatch && subjectMatch[1]) {
+      subject = subjectMatch[1].trim().replace(/['"]/g, '')
+    }
+
+    // Generate a default name based on template type and prompt
+    const promptWords = body.prompt.split(' ').slice(0, 3).join(' ')
+    name = `AI ${templateType} - ${promptWords}`
+
+    return NextResponse.json({
+      content,
+      subject,
+      name
+    })
+
   } catch (error) {
-    console.error('Error generating template:', error)
+    console.error('AI generation error:', error)
     return NextResponse.json(
-      { error: 'Failed to generate email template' },
+      { error: 'Failed to generate template with AI' },
       { status: 500 }
     )
   }
