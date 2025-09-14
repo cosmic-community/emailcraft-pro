@@ -16,6 +16,9 @@ export const cosmicRead = createBucketClient({
   apiEnvironment: "staging"
 })
 
+// Export the main cosmic client
+export { cosmic }
+
 // Contact functions
 export async function getContacts(): Promise<Contact[]> {
   try {
